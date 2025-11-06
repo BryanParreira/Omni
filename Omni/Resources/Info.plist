@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Privacy - Screen Recording Usage Description</key>
+	<string>Omni needs permission to capture your screen to read text from windows that don&apos;t support Accessibility (OCR).</string>
+	<key>Privacy - Accessibility Usage Description</key>
+	<string>Omni needs permission to capture text from your active window to provide contextual answers.</string>
+</dict>
+</plist>
