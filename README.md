@@ -1,81 +1,229 @@
 ✨ Omni: The Context-Aware Desktop AI Assistant
-💡 Overview
-Omni is a powerful, privacy-focused macOS application designed to be your personal desktop intelligence layer. It indexes your local files and uses advanced Large Language Models (LLMs) (both cloud and local via Ollama) to answer natural language questions about your data, documents, and code.
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14%2B-blue" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-5.9-orange" alt="Swift 5.9">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+</p>
+A powerful, privacy-focused macOS application that serves as your personal desktop intelligence layer. Omni securely accesses your local files and calendar, using advanced Large Language Models (LLMs) to answer natural language questions, surface relevant information, and suggest actionable next steps.
 
-Unlike simple search tools, Omni is built for proactive productivity, offering smart actions and surfacing relevant context from your digital workspace.
+💡 Overview
+Omni transforms your Mac into a proactive productivity hub by seamlessly integrating AI assistance with your local files and calendar. Built with privacy at its core, Omni enables instant information retrieval and intelligent action suggestions—all while keeping your data secure.
+Perfect for:
+
+Developers who need quick code explanations and documentation assistance
+Professionals managing multiple meetings and document workflows
+Privacy-conscious users who want AI capabilities without cloud dependency
+Anyone seeking instant, context-aware answers from their local files
+
 
 🚀 Key Features
-Omni is built to make information retrieval instant and actionable.
+Core Intelligence
 
-🧠 AI-Powered File Indexing (RAG): Connects to local files (.pdf, .md, .swift, etc.) and uses an LLM to answer complex, natural language questions about their content.
+🧠 Hybrid LLM Backend: Choose between major cloud providers (OpenAI, Anthropic, Google Gemini) or run models entirely locally with deep Ollama integration (Llama 3, Mistral, and more)
+🎯 AI-Suggested Actions (A-RAG): Dynamic, contextual actions based on file type:
 
-🔌 Flexible LLM Backend: Supports major cloud providers (OpenAI, Anthropic, Gemini) and features deep integration with Ollama for running powerful models (like Llama 3) entirely locally on your Mac for privacy and speed.
+"Explain this code" for Swift/Python files
+"Summarize document" for PDFs
+"Draft an email" for general tasks
+Custom actions tailored to your workflow
 
-🎯 AI-Suggested Actions (A-RAG): Messages returned by the AI come with clickable "Suggested Actions" based on the file type (e.g., "Explain this code," "Draft an email," "Analyze data").
 
-📅 Meeting Preparation: Integrates with your native macOS calendar (including Google/Exchange accounts) to display upcoming events right in the sidebar, ensuring you're always prepared.
+🔍 General Knowledge Mode: Functions as a flexible assistant even without attached files
 
-🛠️ Developer-Focused: Excellent for quickly searching and analyzing code files.
+Workflow & Productivity
 
-💻 Installation
-Omni is currently built for macOS.
+📅 Meeting Preparation: Native macOS Calendar integration displays upcoming events in the sidebar, supporting Google Calendar, Exchange, and iCloud
+⌨️ Global Hotkey Access: Summon Omni instantly with ⌥ + Space from anywhere on your Mac
+📎 Drag-and-Drop Support: Simply drag files (PDF, code, text, etc.) into the chat for instant analysis
+🗑️ Smart Chat Management: Clear current conversations or delete entire sessions via the sidebar context menu
+💬 Persistent History: All conversations are saved locally for easy reference
 
-Requirements
-macOS 14 (Sonoma) or newer.
 
-Xcode 15+ (if building from source).
+⚙️ Installation & Setup
+System Requirements
 
-Running Locally (Developers)
-Clone the Repository:
+macOS: 14 (Sonoma) or newer
+Xcode: 15+ (if building from source)
+Storage: ~100MB for the app, plus space for local models if using Ollama
 
-Bash
+Quick Start
 
-git clone [YOUR_REPO_URL]
-cd Omni
-Open in Xcode:
+Launch Omni: The app runs silently in your menu bar
+Summon the Interface: Press ⌥ + Space anywhere
+Start Chatting:
 
-Bash
+Type any question or request
+Drag-and-drop files directly into the input field
+Click suggested actions to streamline your workflow
 
-xed .
-Run: Select the Omni target and press Cmd + R.
 
-For Local LLM Users (Optional)
-To enable the local LLM feature:
 
-Install Ollama: Download and run the Ollama application from ollama.com.
+Setting Up Local LLMs (Optional but Recommended)
+For maximum privacy and offline capability:
 
-Pull a Model: Open Terminal and pull your desired model (e.g., llama3):
+Install Ollama:
 
-Bash
+bash   # Visit ollama.com to download, or use Homebrew:
+   brew install ollama
 
-ollama pull llama3
-⚙️ Configuration
-Launch: Omni runs silently in the background and can be accessed via the Status Bar icon.
+Pull a Model:
 
-Hotkey: Summon Omni instantly using the global hotkey: ⌥ + Space.
+bash   # Download Llama 3 (recommended for general use)
+   ollama pull llama3
+   
+   # Or try other models:
+   ollama pull mistral
+   ollama pull codellama  # Great for code-related tasks
 
-AI Setup: Open the Settings (⚙️ icon) and navigate to the AI Tab.
+Configure Omni:
 
-Cloud Provider: Enter your API key for OpenAI, Anthropic, or Gemini.
+Open Settings (⚙️ icon in the app)
+Navigate to the AI tab
+Select your installed model from the "Local LLM" dropdown
 
-Local LLM: Select your installed model (e.g., llama3) from the dropdown.
 
-🔒 Privacy & Permissions
-Omni is built with privacy as a core principle.
 
-No Cloud Storage: File content is read only for the purpose of generating context for the LLM. We do not store or transmit your file content to our servers.
+Pro Tip: Local models run entirely on your Mac—no internet required, complete privacy guaranteed.
 
-Local LLM Support: The native Ollama integration allows users to run models locally, ensuring data never leaves your machine.
+🛠️ Building from Source
+Prerequisites
+bash# Clone the repository
+git clone https://github.com/yourusername/omni.git
+cd omni
+
+# Open in Xcode
+open Omni.xcodeproj
+Required Entitlements
+The project uses App Sandbox and requires specific entitlements. Ensure your .entitlements file includes:
+xml<key>com.apple.security.app-sandbox</key>
+<true/>
+<key>com.apple.security.personal-information.calendars</key>
+<true/>
+<key>com.apple.security.personal-information.speech-recognition</key>
+<true/>
+<key>com.apple.security.network.client</key>
+<true/>
+```
+
+### Xcode Configuration
+
+In **Signing & Capabilities** → **App Sandbox**, enable:
+
+- ✅ **Calendars** (under App Data)
+- ✅ **Outgoing Connections (Client)** (under Network) — *Required for Ollama and cloud APIs*
+- ✅ **Speech Recognition** (under Hardware)
+
+### Build & Run
+
+1. Select your development team in **Signing & Capabilities**
+2. Choose your target device (macOS)
+3. Press **`⌘ + R`** to build and run
+
+---
+
+## 🔒 Privacy & Security
+
+Omni is built with privacy as a foundational principle:
+
+- **🏠 Local-First**: When using Ollama, all AI processing happens entirely on your Mac
+- **🚫 No Data Collection**: We never collect, transmit, or store your files or conversations on external servers
+- **🔐 Sandboxed**: Runs in macOS App Sandbox with minimal permissions
+- **📝 Transparent**: File content is read only during active conversations and never retained afterward
+- **🎯 You Control the Data**: Choose between cloud providers or fully local models based on your privacy needs
+
+**Note**: Cloud providers (OpenAI, Anthropic, Google) process data according to their respective privacy policies.
+
+---
+
+## 📖 Usage Examples
+
+### Ask General Questions
+```
+"What's the weather like today in San Francisco?"
+"Explain quantum computing in simple terms"
+```
+
+### Analyze Code
+```
+Drag a .swift file → "Explain what this code does"
+"Find potential bugs in this function"
+"Suggest performance improvements"
+```
+
+### Work with Documents
+```
+Drag a PDF → "Summarize this document"
+"Extract key takeaways from this report"
+"Create an action item list"
+```
+
+### Meeting Preparation
+```
+View upcoming meetings in the sidebar
+"What's on my calendar today?"
+"Prepare talking points for my 3pm meeting"
 
 🤝 Contributing
-We welcome contributions! If you have suggestions for new file types, LLM actions, or encounter any bugs, please open an Issue or submit a Pull Request.
+We welcome contributions from the community! Here's how you can help:
+Reporting Issues
 
-Planned Improvements:
-Sidebar Chat Renaming functionality.
+Check existing issues first
+Provide clear reproduction steps
+Include macOS version and Omni version
 
-Implement additional Suggested Actions (e.g., "Create JIRA ticket").
+Suggesting Features
 
-Add Reminders integration via EventKit.
+Open an issue with the enhancement label
+Describe the use case and expected behavior
+Consider privacy implications
+
+Submitting Pull Requests
+
+Fork the repository
+Create a feature branch (git checkout -b feature/amazing-feature)
+Commit your changes (git commit -m 'Add amazing feature')
+Push to the branch (git push origin feature/amazing-feature)
+Open a Pull Request
+
+Areas we'd love help with:
+
+Supporting additional file types (Excel, Word, etc.)
+New suggested actions for different workflows
+UI/UX improvements
+Performance optimizations
+Documentation and tutorials
+
+
+🗺️ Roadmap
+
+ Multi-file conversation context
+ Custom action templates
+ Integration with Apple Shortcuts
+ Support for team knowledge bases
+ Voice input/output
+ Plugin system for third-party integrations
+
 
 📜 License
 Distributed under the MIT License. See LICENSE for more information.
+
+🙏 Acknowledgments
+
+Ollama for making local LLMs accessible
+OpenAI, Anthropic, and Google for their powerful cloud APIs
+The open-source community for inspiration and tools
+
+
+📧 Contact & Support
+
+Issues: GitHub Issues
+Discussions: GitHub Discussions
+Email: support@omniapp.dev
+
+
+<p align="center">
+  Made with ❤️ for the Mac community
+</p>
+<p align="center">
+  <sub>If you find Omni useful, consider giving it a ⭐️ on GitHub!</sub>
+</p>
