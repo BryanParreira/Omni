@@ -11,6 +11,11 @@ struct SidebarView: View {
     
     @Binding var selectedSession: ChatSession?
     
+    // --- 1. NEW STATE VARIABLES FOR RENAMING ---
+    @State private var renamingSession: ChatSession? = nil
+    @State private var renameText: String = ""
+    @FocusState private var isRenameFieldFocused: Bool
+    
     var body: some View {
         VStack(spacing: 0) {
             // "New Chat" button
@@ -39,41 +44,61 @@ struct SidebarView: View {
             
             // List of chats
             List(chatSessions, selection: $selectedSession) { session in
-                Text(session.title)
-                    .font(.system(size: 13))
-                    .lineLimit(1)
-                    .tag(session)
-                    // --- NEW FEATURE ---
-                    // Add a right-click context menu
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            deleteSession(session)
-                        } label: {
-                            Label("Delete Chat", systemImage: "trash")
+                
+                // --- 2. NEW RENAME LOGIC ---
+                // If this session is the one being renamed, show a TextField
+                if renamingSession == session {
+                    TextField("New name", text: $renameText)
+                        .font(.system(size: 13))
+                        .textFieldStyle(.plain)
+                        .focused($isRenameFieldFocused)
+                        .onSubmit { submitRename(session: session) } // Save on Enter
+                        .onDisappear { submitRename(session: session) } // Save on click-away
+                        .tag(session) // Keep tag for selection
+                } else {
+                    // Otherwise, show the normal Text
+                    Text(session.title)
+                        .font(.system(size: 13))
+                        .lineLimit(1)
+                        .tag(session)
+                        .contextMenu {
+                            // --- 3. NEW RENAME BUTTON ---
+                            Button {
+                                startRename(session: session)
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            
+                            // Divider
+                            Divider()
+                            
+                            // Existing Delete Button
+                            Button(role: .destructive) {
+                                deleteSession(session)
+                            } label: {
+                                Label("Delete Chat", systemImage: "trash")
+                            }
                         }
-                    }
-                    // --- END OF FEATURE ---
+                }
+                // --- END OF NEW LOGIC ---
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
         }
         .background(Color(hex: "1E1E1E"))
-        // We're done with onAppear, the logic is in the AppDelegate now
     }
     
     /// Creates the UI for the "Today's Events" section
     @ViewBuilder
     private func calendarSection() -> some View {
+        // ... (This function is unchanged) ...
         VStack(alignment: .leading, spacing: 8) {
             Text("TODAY'S EVENTS")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.horizontal)
             
-            // This logic now works on launch because
-            // 'isAccessDenied' is set by the AppDelegate
             if calendarService.isAccessDenied {
-                // Case 1: User has denied permission
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Calendar is not connected.")
                         .font(.system(size: 12, weight: .medium))
@@ -89,10 +114,8 @@ struct SidebarView: View {
                 .padding(.horizontal)
 
             } else if calendarService.currentStatus == .notDetermined {
-                // Case 2: We haven't asked yet.
                 Button {
                     Task {
-                        // Add the delay back to prevent layout crash
                         try? await Task.sleep(nanoseconds: 100_000_000)
                         await calendarService.requestAccess()
                     }
@@ -105,7 +128,6 @@ struct SidebarView: View {
                 .padding(.horizontal)
 
             } else if calendarService.upcomingEvents.isEmpty {
-                // Case 3: Permission given, but no events
                 HStack {
                     Text("No upcoming events today.")
                         .font(.system(size: 12))
@@ -121,7 +143,6 @@ struct SidebarView: View {
                 .padding(.horizontal)
                 
             } else {
-                // Case 4: Show the upcoming events
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(calendarService.upcomingEvents.prefix(3), id: \.eventIdentifier) { event in
                         eventRow(event)
@@ -134,6 +155,7 @@ struct SidebarView: View {
     
     /// Creates a single row for an event
     private func eventRow(_ event: EKEvent) -> some View {
+        // ... (This function is unchanged) ...
         HStack(spacing: 6) {
             Circle()
                 .fill(Color(cgColor: event.calendar.cgColor))
@@ -154,6 +176,7 @@ struct SidebarView: View {
     }
     
     private func createNewChat() {
+        // ... (This function is unchanged) ...
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
         
@@ -169,15 +192,41 @@ struct SidebarView: View {
         selectedSession = newSession
     }
     
-    // --- NEW FUNCTION ---
     private func deleteSession(_ session: ChatSession) {
-        // If the user deletes the chat they're looking at,
-        // we need to deselect it.
+        // ... (This function is unchanged) ...
         if selectedSession == session {
             selectedSession = nil
         }
         modelContext.delete(session)
         try? modelContext.save()
     }
-    // --- END NEW FUNCTION ---
+    
+    // --- 4. NEW HELPER FUNCTIONS FOR RENAMING ---
+    
+    /// Sets the state to start renaming a chat
+    private func startRename(session: ChatSession) {
+        renamingSession = session
+        renameText = session.title
+        
+        // Delay ensures the TextField exists before we try to focus it
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isRenameFieldFocused = true
+        }
+    }
+    
+    /// Saves the new name and exits renaming mode
+    private func submitRename(session: ChatSession) {
+        // We only want to run this *once*
+        guard renamingSession == session else { return }
+        
+        // Don't save an empty name
+        if !renameText.isEmpty {
+            session.title = renameText
+            try? modelContext.save()
+        }
+        
+        // Reset the state
+        renamingSession = nil
+        renameText = ""
+    }
 }

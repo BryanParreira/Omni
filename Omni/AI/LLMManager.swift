@@ -5,6 +5,9 @@ enum LLMMode {
     case local
 }
 
+// --- 1. WE HAVE DELETED THE 'LLMMessage' STRUCT ---
+// We will use 'OpenAIMessage' from your OpenAIClient.swift file instead.
+
 class LLMManager {
     static let shared = LLMManager()
     
@@ -20,51 +23,62 @@ class LLMManager {
         return .local
     }
     
-    private let defaultSystemPrompt = """
-    You are a helpful File System Analyst AI assistant.
-    Answer questions ONLY based on the file content provided.
-    If the context doesn't contain relevant information, say so clearly.
+    private let generalSystemPrompt = """
+    You are a helpful general-purpose AI assistant named Omni.
+    Answer the user's question clearly and concisely.
+    You can optionally suggest one follow-up action.
+    The tag format is [ACTION: ACTION_NAME].
+    Example: [ACTION: DRAFT_EMAIL]
     """
-    
-    // This is the function signature that was causing the error in ContentViewModel
-    // It now correctly accepts the 'files' array.
-    func generateResponse(query: String, context: String, files: [URL]) async throws -> (content: String, action: String?) {
+
+    func generateResponse(chatHistory: [ChatMessage], context: String, files: [URL]) async throws -> (content: String, action: String?) {
         
         let responseText: String
         
-        // This function creates a new prompt based on the file types
-        let smartPrompt = generateSmartPrompt(for: files)
+        // --- 2. BUILD THE CHAT HISTORY (using OpenAIMessage) ---
+        var messages: [OpenAIMessage] = [] // <-- Use OpenAIMessage
         
+        let systemPrompt = files.isEmpty ? generalSystemPrompt : generateSmartPrompt(for: files)
+        messages.append(OpenAIMessage(role: "system", content: systemPrompt)) // <-- Use OpenAIMessage
+        
+        if !context.isEmpty {
+            let contextMessage = "File Context:\n\(context)"
+            messages.append(OpenAIMessage(role: "user", content: contextMessage)) // <-- Use OpenAIMessage
+        }
+        
+        for message in chatHistory {
+            if message.content.contains("Hi! I'm Omni") && chatHistory.count == 1 {
+                continue
+            }
+            let role = message.isUser ? "user" : "assistant"
+            messages.append(OpenAIMessage(role: role, content: message.content)) // <-- Use OpenAIMessage
+        }
+        
+        // --- 3. UPDATE THE CALLS ---
         switch currentMode {
         case .openAI:
+            // This call is now correct and will compile
             responseText = try await OpenAIClient.shared.generateResponse(
-                query: query,
-                context: context,
-                systemPrompt: smartPrompt // Pass in the new smart prompt
+                messages: messages
             )
         case .local:
+            // This call will still have an error, which is expected
             responseText = try await LocalLLMRunner.shared.generateResponse(
-                query: query,
-                context: context,
-                systemPrompt: smartPrompt // Pass in the new smart prompt
+                messages: messages
             )
         }
         
-        // --- FIX: Added 'self.' to fix the "Cannot find in scope" error ---
         return self.parseResponseForAction(responseText)
     }
     
+    // --- (generateSmartPrompt and parseResponseForAction are unchanged) ---
+    
     private func generateSmartPrompt(for files: [URL]) -> String {
-        guard !files.isEmpty else {
-            return defaultSystemPrompt // Use the fallback if no files
-        }
-        
         var fileTypes = Set<String>()
         for file in files {
             fileTypes.insert(file.pathExtension.lowercased())
         }
         
-        // This prompt is much more specific about the action format
         var actionsPrompt = """
         ACTIONS:
         Your response MUST end with a single action tag.
@@ -81,12 +95,9 @@ class LLMManager {
         if fileTypes.contains("csv") {
             actionsPrompt += "\n- For this CSV file, suggest 'ANALYZE_DATA' or 'FIND_TRENDS'."
         }
-        
-        // Fallback action
         actionsPrompt += "\n- For a generic request, you can suggest 'DRAFT_EMAIL'."
         actionsPrompt += "\n- Example ending: [ACTION: EXPLAIN_CODE]"
 
-        // Combine all parts into the final prompt
         return """
         You are a File System Analyst AI assistant.
         
@@ -100,10 +111,6 @@ class LLMManager {
     }
     
     private func parseResponseForAction(_ text: String) -> (content: String, action: String?) {
-        // --- THIS IS THE FIX for the parsing bug ---
-        // We will try two formats: [ACTION: TAG] and [TAG]
-        
-        // 1. Try to find the format [ACTION: TAG]
         if let range = text.range(of: "[ACTION:", options: .backwards) {
             let tagPart = text[range.lowerBound...]
             if let endRange = tagPart.range(of: "]") {
@@ -116,22 +123,17 @@ class LLMManager {
             }
         }
         
-        // 2. Try to find the format [TAG] (like your screenshot)
         if let range = text.range(of: "[", options: .backwards), let endRange = text.range(of: "]", options: .backwards), range.lowerBound < endRange.lowerBound {
             
             let tag = text[range.upperBound..<endRange.lowerBound]
             
-            // Check if the tag is a valid, single-word action
-            // This avoids parsing "summarize this [document]" as an action
             let potentialAction = String(tag).trimmingCharacters(in: .whitespacesAndNewlines)
             if potentialAction.allSatisfy({ $0.isUppercase || $0 == "_" }) {
                 let cleanContent = text[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
                 return (content: cleanContent, action: potentialAction)
             }
         }
-        // --- END OF FIX ---
         
-        // No action found, return the full text
         return (content: text.trimmingCharacters(in: .whitespacesAndNewlines), action: nil)
     }
-} // <-- This was the missing brace that caused the compile error
+}

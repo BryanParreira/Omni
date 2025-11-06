@@ -6,22 +6,21 @@ import AppKit
 @MainActor
 class ContentViewModel: ObservableObject {
     
-    // ... (all your existing properties) ...
     var modelContext: ModelContext
     @Published var currentSession: ChatSession
     @Published var inputText: String = ""
     @Published var isLoading: Bool = false
     @Published var shouldFocusInput: Bool = false
-    @Published var attachedFiles: [URL] = []
+    
+    // We removed the local attachedFiles array
+    
     private let searchService = FileSearchService()
     
     init(modelContext: ModelContext, session: ChatSession) {
-        // ... (init is unchanged) ...
         self.modelContext = modelContext
         self.currentSession = session
     }
     
-    // ... (focusInput, addAttachedFiles, removeAttachment) ...
     func focusInput() {
         shouldFocusInput = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -31,31 +30,34 @@ class ContentViewModel: ObservableObject {
     
     func addAttachedFiles(urls: [URL]) {
         for url in urls {
-            if !attachedFiles.contains(url) {
-                attachedFiles.append(url)
+            if !currentSession.attachedFileURLs.contains(url) {
+                currentSession.attachedFileURLs.append(url)
             }
         }
     }
     
     func removeAttachment(url: URL) {
-        attachedFiles.removeAll(where: { $0 == url })
+        currentSession.attachedFileURLs.removeAll(where: { $0 == url })
     }
 
     func sendMessage() {
-        // ... (sendMessage is unchanged) ...
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
         let userMessageText = inputText
-        let userAttachments = attachedFiles
+        let sessionAttachments = currentSession.attachedFileURLs
         
         inputText = ""
-        let sourceFilePaths = userAttachments.map { $0.path }
+        let sourceFilePaths = sessionAttachments.map { $0.path }
         
+        // --- 1. THIS IS THE FIX ---
+        // The user's message *should* show the sources it was sent with.
         let userMessage = ChatMessage(
             content: userMessageText,
             isUser: true,
             sources: sourceFilePaths.isEmpty ? nil : sourceFilePaths
         )
+        // --- END OF FIX ---
+        
         currentSession.messages.append(userMessage)
         
         if currentSession.title == "New Chat" {
@@ -68,43 +70,39 @@ class ContentViewModel: ObservableObject {
         Task {
             var botMessage: ChatMessage
             
+            // We use the same source paths for the bot's response
+            // to show it's part of the same context.
+            let botSourceFilePaths = sessionAttachments.map { $0.path }
+            
             do {
-                var context = "No file context found."
-                var finalSourceFilePaths: [String] = []
+                var context = ""
                 
-                if !userAttachments.isEmpty {
+                if !sessionAttachments.isEmpty {
                     let reader = FileSearchService()
                     var fileContents: [String] = []
                     
-                    for url in userAttachments {
+                    for url in sessionAttachments {
                         if let content = await reader.readFileContent(at: url) {
                             fileContents.append("File: \(url.lastPathComponent)\nContent: \(content)")
-                            finalSourceFilePaths.append(url.path)
                         }
                     }
                     if !fileContents.isEmpty {
                         context = fileContents.joined(separator: "\n\n---\n\n")
                     }
-                } else {
-                    let searchResults = await searchService.search(query: userMessageText)
-                    if !searchResults.isEmpty {
-                        context = searchResults
-                            .map { "File: \($0.filePath)\nContent: \($0.fileContent)" }
-                            .joined(separator: "\n\n---\n\n")
-                        finalSourceFilePaths = searchResults.map { $0.filePath }
-                    }
                 }
                 
+                let chatHistory = Array(currentSession.messages)
+                
                 let aiResponse = try await LLMManager.shared.generateResponse(
-                    query: userMessageText,
+                    chatHistory: chatHistory,
                     context: context,
-                    files: userAttachments
+                    files: sessionAttachments
                 )
                 
                 botMessage = ChatMessage(
                     content: aiResponse.content,
                     isUser: false,
-                    sources: finalSourceFilePaths.isEmpty ? nil : finalSourceFilePaths,
+                    sources: botSourceFilePaths.isEmpty ? nil : botSourceFilePaths,
                     suggestedAction: aiResponse.action
                 )
                 
@@ -124,7 +122,6 @@ class ContentViewModel: ObservableObject {
     }
     
     func clearChat() {
-        // ... (clearChat is unchanged) ...
         for message in currentSession.messages {
             modelContext.delete(message)
         }
@@ -136,14 +133,13 @@ class ContentViewModel: ObservableObject {
         )
         currentSession.messages.append(welcomeMessage)
         currentSession.title = "New Chat"
+        currentSession.attachedFileURLs = []
         
         try? modelContext.save()
-        self.attachedFiles = []
     }
     
-    // --- THIS IS THE FIX ---
-    // We add all our new actions to the 'switch' statement
     func performAction(action: String, on message: ChatMessage) {
+        // ... (performAction is unchanged) ...
         switch action {
         case "DRAFT_EMAIL":
             let summary = message.content
@@ -157,25 +153,22 @@ class ContentViewModel: ObservableObject {
             NSWorkspace.shared.open(mailtoURL)
             
         case "SUMMARIZE_DOCUMENT":
-            // "Copy this summary" action
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
             pasteboard.setString(message.content, forType: .string)
             
         case "EXPLAIN_CODE", "FIND_BUGS", "ANALYZE_DATA", "FIND_TRENDS":
-            // For these actions, let's pre-fill the user's input
-            // text and let them send the new message.
-            let (title, _) = titleAndIcon(for: action) // Get the button title
-            self.inputText = title // Set the text field
-            self.focusInput() // Focus the text field
+            let (title, _) = titleAndIcon(for: action)
+            self.inputText = title
+            self.focusInput()
             
         default:
             print("Unknown action: \(action)")
         }
     }
     
-    // Helper to get the button title (to avoid duplicating logic)
     private func titleAndIcon(for action: String) -> (String, String) {
+        // ... (helper is unchanged) ...
         switch action {
         case "DRAFT_EMAIL":
             return ("Draft an email with this summary", "square.and.pencil")
@@ -193,5 +186,4 @@ class ContentViewModel: ObservableObject {
             return (action.replacingOccurrences(of: "_", with: " ").capitalized, "sparkles")
         }
     }
-    // --- END OF FIX ---
 }

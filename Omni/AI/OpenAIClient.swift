@@ -1,16 +1,19 @@
 import Foundation
 
 // MARK: - OpenAI Codable Structs
-private struct OpenAIRequest: Codable {
+
+// 1. We make these 'internal' (by removing 'private') so LLMManager can see them
+struct OpenAIRequest: Codable {
     let model: String
     let messages: [OpenAIMessage]
 }
 
-private struct OpenAIMessage: Codable {
+struct OpenAIMessage: Codable {
     let role: String
     let content: String
 }
 
+// (The response structs can stay private)
 private struct OpenAIResponse: Codable {
     let choices: [Choice]
     struct Choice: Codable {
@@ -33,16 +36,19 @@ class OpenAIClient {
         UserDefaults.standard.string(forKey: "selected_model") ?? "gpt-4o-mini"
     }
     
-    func generateResponse(query: String, context: String, systemPrompt: String) async throws -> String {
+    // --- 2. THIS IS THE FIX ---
+    // We update the function signature to accept the 'messages' array
+    // This matches what LLMManager is now sending.
+    func generateResponse(messages: [OpenAIMessage]) async throws -> String {
+    // --- END OF FIX ---
+        
         guard !apiKey.isEmpty else {
             throw AIError.invalidAPIKey
         }
         
-        let messages = [
-            OpenAIMessage(role: "system", content: systemPrompt),
-            OpenAIMessage(role: "user", content: "File Context:\n\(context)"),
-            OpenAIMessage(role: "user", content: "User Query:\n\(query)")
-        ]
+        // --- 3. THE OLD LOGIC IS REMOVED ---
+        // We no longer build the 'messages' array here.
+        // It's now passed in directly.
         
         let requestBody = OpenAIRequest(model: selectedModel, messages: messages)
         

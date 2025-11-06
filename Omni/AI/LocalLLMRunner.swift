@@ -2,21 +2,18 @@ import Foundation
 
 // MARK: - Ollama Codable Structs
 
-// --- FIX: This struct is only ever ENCODED, not decoded ---
+// This request struct is correct. Ollama's /api/generate endpoint
+// takes a single "prompt" string, not a message array.
 private struct OllamaGenerateRequest: Encodable {
     let model: String
     let prompt: String
-    // This line is now fine because the struct isn't Decodable
     let stream: Bool = false
 }
 
-// --- FIX: This struct is only ever DECODED ---
 private struct OllamaGenerateResponse: Decodable {
     let response: String
 }
 
-// These structs were declared in the old LocalLLMService and were conflicting.
-// They now live here.
 private struct OllamaTagsResponse: Decodable {
     let models: [OllamaModel]
 }
@@ -38,17 +35,21 @@ class LocalLLMRunner {
         UserDefaults.standard.string(forKey: "selected_model") ?? "llama-3-8b-instruct"
     }
 
-    func generateResponse(query: String, context: String, systemPrompt: String) async throws -> String {
+    // --- 1. THIS IS THE FIX ---
+    // We update the function signature to accept the 'messages' array
+    // This matches what LLMManager is now sending.
+    func generateResponse(messages: [OpenAIMessage]) async throws -> String {
+    // --- END OF FIX ---
         
-        let fullPrompt = """
-        \(systemPrompt)
+        // --- 2. NEW LOGIC ---
+        // We must convert the 'messages' array back into a
+        // single 'fullPrompt' string, because Ollama's /api/generate
+        // endpoint (unlike OpenAI's) expects a single prompt.
         
-        File Context:
-        \(context)
-        
-        User Query:
-        \(query)
-        """
+        // We'll build the prompt, ignoring roles (Ollama's simple
+        // models work best this way).
+        let fullPrompt = messages.map { $0.content }.joined(separator: "\n\n")
+        // --- END OF NEW LOGIC ---
         
         let requestBody = OllamaGenerateRequest(model: selectedModel, prompt: fullPrompt)
         
@@ -82,6 +83,7 @@ class LocalLLMRunner {
     
     // Function to fetch installed models
     func fetchInstalledModels() async throws -> [OllamaModel] {
+        // ... (this function is unchanged) ...
         let url = ollamaURL.appendingPathComponent("api/tags")
         var request = URLRequest(url: url)
         request.httpMethod = "GET"

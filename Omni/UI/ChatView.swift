@@ -1,9 +1,12 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @StateObject var viewModel: ContentViewModel
     
     @FocusState private var isInputFocused: Bool
+    
+    @State private var isDropTarget = false
     
     var session: ChatSession {
         viewModel.currentSession
@@ -13,9 +16,21 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
     
+    // --- 1. NEW HELPER VARIABLE ---
+    // This logic determines if we should show the "file pills"
+    private var shouldShowFilePills: Bool {
+        let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
+        // Check if any message in the history *already* has sources
+        let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
+        
+        // Only show the pills if we have files attached AND
+        // no messages have been sent with them yet.
+        return hasAttachedFiles && !hasMessagesWithSources
+    }
+    // --- END OF NEW VARIABLE ---
+    
     var body: some View {
         ZStack {
-            // ... (background) ...
             LinearGradient(
                 colors: [Color(hex: "1A1A1A"), Color(hex: "1E1E1E")],
                 startPoint: .top, endPoint: .bottom
@@ -45,7 +60,6 @@ struct ChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
                     }
-                    // ... (onChange modifiers) ...
                     .onChange(of: session.messages.count) { _, _ in
                         if let lastMessage = sortedMessages.last {
                             withAnimation(.easeOut(duration: 0.3)) {
@@ -60,11 +74,13 @@ struct ChatView: View {
                     }
                 }
                 
-                // ... (Attached Files "Pills" View) ...
-                if !viewModel.attachedFiles.isEmpty {
+                // --- 2. THIS IS THE FIX ---
+                // We now use our new helper variable to decide
+                // whether to show this view or not.
+                if shouldShowFilePills {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(viewModel.attachedFiles, id: \.self) { url in
+                            ForEach(viewModel.currentSession.attachedFileURLs, id: \.self) { url in
                                 FilePillView(url: url) {
                                     viewModel.removeAttachment(url: url)
                                 }
@@ -76,8 +92,9 @@ struct ChatView: View {
                     .background(Color(hex: "242424"))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+                // --- END OF FIX ---
                 
-                // ... (Input Area) ...
+                // Input Area
                 VStack(spacing: 0) {
                     Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
                     HStack(spacing: 12) {
@@ -123,11 +140,14 @@ struct ChatView: View {
                     .background(Color(hex: "1A1A1A"))
                 }
             }
+            
+            if isDropTarget {
+                dropOverlay()
+            }
         }
         .environmentObject(viewModel)
         .navigationTitle(session.title)
         .toolbar {
-            // ... (toolbar items) ...
             ToolbarItemGroup(placement: .automatic) {
                 Button(action: { viewModel.clearChat() }) {
                     Image(systemName: "trash")
@@ -140,6 +160,20 @@ struct ChatView: View {
                 .help("Settings")
             }
         }
+        .onDrop(of: [UTType.fileURL], isTargeted: $isDropTarget) { providers in
+            Task {
+                var urls: [URL] = []
+                for provider in providers {
+                    if let url = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) as? URL {
+                        urls.append(url)
+                    }
+                }
+                if !urls.isEmpty {
+                    viewModel.addAttachedFiles(urls: urls)
+                }
+            }
+            return true
+        }
         .onChange(of: viewModel.shouldFocusInput) { _, shouldFocus in
             if shouldFocus { isInputFocused = true }
         }
@@ -148,6 +182,7 @@ struct ChatView: View {
         }
     }
     
+    // ... (suggestedActionButton, titleAndIcon, presentFilePicker, dropOverlay are all unchanged) ...
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
         let (title, icon) = titleAndIcon(for: action)
@@ -167,8 +202,6 @@ struct ChatView: View {
         .padding(.leading, 40)
     }
     
-    // --- THIS IS THE FIX ---
-    // We add all our new actions to this helper
     private func titleAndIcon(for action: String) -> (String, String) {
         let title: String
         let icon: String
@@ -198,10 +231,8 @@ struct ChatView: View {
         }
         return (title, icon)
     }
-    // --- END OF FIX ---
     
     func presentFilePicker() {
-        // ... (function is unchanged) ...
         let openPanel = NSOpenPanel()
         openPanel.canChooseFiles = true
         openPanel.canChooseDirectories = false
@@ -214,5 +245,30 @@ struct ChatView: View {
                 }
             }
         }
+    }
+    
+    @ViewBuilder
+    private func dropOverlay() -> some View {
+        ZStack {
+            Color.black.opacity(0.6)
+            
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    Color(hex: "AAAAAA"),
+                    style: StrokeStyle(lineWidth: 2, dash: [10])
+                )
+                .padding(20)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "arrow.down.doc.fill")
+                    .font(.system(size: 50))
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                Text("Drop Files Here")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color(hex: "EAEAEA"))
+            }
+        }
+        .transition(.opacity)
     }
 }

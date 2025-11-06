@@ -624,7 +624,7 @@ struct AboutView: View {
             Spacer()
             
             HStack(spacing: 20) {
-                Link("Documentation", destination: URL(string: "https://github.com")!)
+                Link("Documentation", destination: URL(string: "https://github.com/BryanParreira/Omni")!)
                 Text("•")
                     .foregroundColor(Color(hex: "8A8A8A"))
                 Link("Report Issue", destination: URL(string: "https://github.com")!)
