@@ -4,7 +4,7 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
-    // --- 1. "Catch" the FileIndexer from the environment ---
+    // "Catch" the FileIndexer from the environment
     @Environment(FileIndexer.self) private var fileIndexer
     
     @Query(sort: \ChatSession.startDate, order: .reverse)
@@ -23,7 +23,7 @@ struct ContentView: View {
             NavigationStack {
                 if let session = selectedSession {
                     
-                    // --- 2. Pass the fileIndexer into the viewModel ---
+                    // Pass the fileIndexer into the viewModel
                     ChatView(viewModel: ContentViewModel(
                         modelContext: modelContext,
                         session: session,
@@ -35,8 +35,11 @@ struct ContentView: View {
                     
                     // --- THIS IS THE IMPROVED UI ---
                     VStack(spacing: 16) {
-                        // ... (your existing empty state UI) ...
-                        Image(systemName: "magnifyingglass.circle.fill")
+                        
+                        // --- THIS IS THE FIX ---
+                        // We replaced "magnifyingglass.circle.fill" with "brain"
+                        Image(systemName: "brain")
+                        // --- END OF FIX ---
                             .font(.system(size: 50))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
                         
@@ -74,7 +77,6 @@ struct ContentView: View {
     
     // This is a helper function for the "empty state"
     private func createFirstChat() {
-        // ... (this function is unchanged) ...
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
         
