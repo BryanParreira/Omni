@@ -5,7 +5,6 @@ enum LLMMode {
     case local
 }
 
-// --- 1. WE HAVE DELETED THE 'LLMMessage' STRUCT ---
 // We will use 'OpenAIMessage' from your OpenAIClient.swift file instead.
 
 class LLMManager {
@@ -35,15 +34,14 @@ class LLMManager {
         
         let responseText: String
         
-        // --- 2. BUILD THE CHAT HISTORY (using OpenAIMessage) ---
-        var messages: [OpenAIMessage] = [] // <-- Use OpenAIMessage
+        var messages: [OpenAIMessage] = []
         
         let systemPrompt = files.isEmpty ? generalSystemPrompt : generateSmartPrompt(for: files)
-        messages.append(OpenAIMessage(role: "system", content: systemPrompt)) // <-- Use OpenAIMessage
+        messages.append(OpenAIMessage(role: "system", content: systemPrompt))
         
         if !context.isEmpty {
             let contextMessage = "File Context:\n\(context)"
-            messages.append(OpenAIMessage(role: "user", content: contextMessage)) // <-- Use OpenAIMessage
+            messages.append(OpenAIMessage(role: "user", content: contextMessage))
         }
         
         for message in chatHistory {
@@ -51,18 +49,15 @@ class LLMManager {
                 continue
             }
             let role = message.isUser ? "user" : "assistant"
-            messages.append(OpenAIMessage(role: role, content: message.content)) // <-- Use OpenAIMessage
+            messages.append(OpenAIMessage(role: role, content: message.content))
         }
         
-        // --- 3. UPDATE THE CALLS ---
         switch currentMode {
         case .openAI:
-            // This call is now correct and will compile
             responseText = try await OpenAIClient.shared.generateResponse(
                 messages: messages
             )
         case .local:
-            // This call will still have an error, which is expected
             responseText = try await LocalLLMRunner.shared.generateResponse(
                 messages: messages
             )
@@ -71,7 +66,6 @@ class LLMManager {
         return self.parseResponseForAction(responseText)
     }
     
-    // --- (generateSmartPrompt and parseResponseForAction are unchanged) ---
     
     private func generateSmartPrompt(for files: [URL]) -> String {
         var fileTypes = Set<String>()
@@ -102,38 +96,57 @@ class LLMManager {
         You are a File System Analyst AI assistant.
         
         CRITICAL RULES:
-        1. Answer questions ONLY based on the file content provided in the context.
-        2. ALWAYS cite the source file name (e.g., "According to 'Resume.pdf'...").
-        3. If the context doesn't contain relevant information, say so clearly.
+        1. You will be given a numbered list of context chunks.
+        2. Answer the user's query *only* using this context.
+        3. **You MUST cite your sources.** At the end of any sentence
+           or paragraph that uses information from a chunk, add the
+           corresponding number tag, like `[1]` or `[1, 2]`.
+        4. If the context has no relevant information, say so clearly.
 
         \(actionsPrompt)
         """
     }
     
+    // --- THIS IS THE FIX ---
+    // This new function uses a Regular Expression (Regex) to reliably
+    // find and extract the action tag, no matter the format.
     private func parseResponseForAction(_ text: String) -> (content: String, action: String?) {
-        if let range = text.range(of: "[ACTION:", options: .backwards) {
-            let tagPart = text[range.lowerBound...]
-            if let endRange = tagPart.range(of: "]") {
-                let actionTag = tagPart[range.upperBound..<endRange.lowerBound]
-                let cleanContent = text[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
-                let cleanAction = String(actionTag).trimmingCharacters(in: .whitespacesAndNewlines)
+        // This regex looks for a tag at the *very end* of the string.
+        // It matches [ACTION: TAG_NAME] or [TAG_NAME]
+        // (?:\s*\[(?:ACTION: )?([A-Z_]+)\]\s*$)
+        let pattern = #"(?:\s*\[(?:ACTION: )?([A-Z_]+)\]\s*)$"#
+        
+        guard let regex = try? NSRegularExpression(pattern: pattern) else {
+            return (content: text, action: nil)
+        }
+        
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        
+        // Check if we find a match
+        if let match = regex.firstMatch(in: text, options: [], range: range) {
+            
+            // Get the full range of the *entire tag* (e.g., "[ACTION: DRAFT_EMAIL]")
+            let fullTagRange = match.range(at: 0)
+            
+            // Get the range of *just the action* (e.g., "DRAFT_EMAIL")
+            let actionNameRange = match.range(at: 1)
+
+            if let fullTagSwiftRange = Range(fullTagRange, in: text),
+               let actionNameSwiftRange = Range(actionNameRange, in: text) {
                 
-                if cleanAction.isEmpty { return (content: cleanContent, action: nil) }
+                // Extract the clean content (everything *before* the tag)
+                let cleanContent = String(text[..<fullTagSwiftRange.lowerBound])
+                                   .trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // Extract the clean action name
+                let cleanAction = String(text[actionNameSwiftRange])
+                
                 return (content: cleanContent, action: cleanAction)
             }
         }
         
-        if let range = text.range(of: "[", options: .backwards), let endRange = text.range(of: "]", options: .backwards), range.lowerBound < endRange.lowerBound {
-            
-            let tag = text[range.upperBound..<endRange.lowerBound]
-            
-            let potentialAction = String(tag).trimmingCharacters(in: .whitespacesAndNewlines)
-            if potentialAction.allSatisfy({ $0.isUppercase || $0 == "_" }) {
-                let cleanContent = text[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
-                return (content: cleanContent, action: potentialAction)
-            }
-        }
-        
+        // No tag was found, return the original text
         return (content: text.trimmingCharacters(in: .whitespacesAndNewlines), action: nil)
     }
+    // --- END OF FIX ---
 }

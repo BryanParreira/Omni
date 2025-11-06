@@ -12,13 +12,16 @@ class ContentViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var shouldFocusInput: Bool = false
     
-    // We removed the local attachedFiles array
+    // --- 1. NEW PROPERTIES ---
+    private var fileIndexer: FileIndexer // The new service
+    private let searchService = FileSearchService() // We'll use this for searching chunks
     
-    private let searchService = FileSearchService()
-    
-    init(modelContext: ModelContext, session: ChatSession) {
+    // --- 2. UPDATED INIT ---
+    // It now accepts the FileIndexer, fixing the compile error from ContentView
+    init(modelContext: ModelContext, session: ChatSession, fileIndexer: FileIndexer) {
         self.modelContext = modelContext
         self.currentSession = session
+        self.fileIndexer = fileIndexer // Store it
     }
     
     func focusInput() {
@@ -28,16 +31,32 @@ class ContentViewModel: ObservableObject {
         }
     }
     
+    // --- 3. UPDATED FILE HANDLING ---
+    // This function now saves the file to the session *and*
+    // triggers the background indexing.
     func addAttachedFiles(urls: [URL]) {
+        var newURLs: [URL] = []
         for url in urls {
             if !currentSession.attachedFileURLs.contains(url) {
                 currentSession.attachedFileURLs.append(url)
+                newURLs.append(url)
             }
+        }
+        
+        // Trigger background indexing for the new files
+        Task {
+            // This now returns the overview data, but we'll use it in the next step.
+            // For now, just call it.
+            _ = await fileIndexer.indexFiles(at: newURLs)
+            // Save after indexing is done
+            try? modelContext.save()
         }
     }
     
     func removeAttachment(url: URL) {
         currentSession.attachedFileURLs.removeAll(where: { $0 == url })
+        // TODO: We could also delete the index here, but for now this is fine.
+        try? modelContext.save() // Fixed your typo: modelDeltac -> modelContext
     }
 
     func sendMessage() {
@@ -49,15 +68,11 @@ class ContentViewModel: ObservableObject {
         inputText = ""
         let sourceFilePaths = sessionAttachments.map { $0.path }
         
-        // --- 1. THIS IS THE FIX ---
-        // The user's message *should* show the sources it was sent with.
         let userMessage = ChatMessage(
             content: userMessageText,
             isUser: true,
             sources: sourceFilePaths.isEmpty ? nil : sourceFilePaths
         )
-        // --- END OF FIX ---
-        
         currentSession.messages.append(userMessage)
         
         if currentSession.title == "New Chat" {
@@ -69,27 +84,35 @@ class ContentViewModel: ObservableObject {
         
         Task {
             var botMessage: ChatMessage
-            
-            // We use the same source paths for the bot's response
-            // to show it's part of the same context.
             let botSourceFilePaths = sessionAttachments.map { $0.path }
             
             do {
                 var context = ""
                 
+                // --- 4. THIS IS THE NEW RAG LOGIC ---
+                // If we have files, we search for *chunks*, not the whole file
                 if !sessionAttachments.isEmpty {
-                    let reader = FileSearchService()
-                    var fileContents: [String] = []
                     
-                    for url in sessionAttachments {
-                        if let content = await reader.readFileContent(at: url) {
-                            fileContents.append("File: \(url.lastPathComponent)\nContent: \(content)")
-                        }
-                    }
-                    if !fileContents.isEmpty {
-                        context = fileContents.joined(separator: "\n\n---\n\n")
+                    // 1. Search for relevant chunks in the database
+                    //    (We will build this function in the next step)
+                    let chunks = await searchService.searchChunks(
+                        query: userMessageText,
+                        in: sessionAttachments,
+                        modelContext: modelContext
+                    )
+                    
+                    if chunks.isEmpty {
+                        // Fallback if no relevant chunks are found
+                        // (This is what you saw in your screenshot!)
+                        context = "No relevant context found in the attached files for that query."
+                    } else {
+                        // 2. Build the context ONLY from the relevant chunks
+                        context = "RELEVANT CONTEXT:\n"
+                        context += chunks.map { "Chunk from '\($0.fileName)':\n\($0.text)" }
+                                         .joined(separator: "\n\n---\n\n")
                     }
                 }
+                // --- END OF NEW RAG LOGIC ---
                 
                 let chatHistory = Array(currentSession.messages)
                 
@@ -122,6 +145,7 @@ class ContentViewModel: ObservableObject {
     }
     
     func clearChat() {
+        // ... (clearChat is unchanged) ...
         for message in currentSession.messages {
             modelContext.delete(message)
         }

@@ -8,25 +8,30 @@ class OmniPanelController: NSObject {
     private var panel: OmniPanel!
     private var hostingView: NSHostingView<AnyView>?
     
-    // --- 1. NEW PROPERTY ---
-    private var calendarService: CalendarService
+    // --- REMOVED ---
+    // private var calendarService: CalendarService
+    // --- END REMOVED ---
     
-    // --- 2. MODIFIED INIT ---
-    // Init now accepts the CalendarService
-    init(modelContainer: ModelContainer, calendarService: CalendarService) {
-        self.calendarService = calendarService // Store it
+    private var fileIndexer: FileIndexer
+    
+    // --- UPDATED INIT ---
+    // Init now only accepts the services we are keeping
+    init(modelContainer: ModelContainer, fileIndexer: FileIndexer) {
+        self.fileIndexer = fileIndexer // Store it
         super.init()
 
-        // 3. Create the ContentView
+        // Create the ContentView
         let contentView = ContentView()
 
-        // 4. Create the hosting view and inject *both* the database
-        //    and the new calendar service into the environment.
+        // Create the hosting view and inject the remaining services
         let hostingView = NSHostingView(
             rootView: AnyView(
                 contentView
                     .modelContainer(modelContainer)
-                    .environment(calendarService) // <-- ADD THIS
+                    // --- REMOVED ---
+                    // .environment(calendarService)
+                    // --- END REMOVED ---
+                    .environment(fileIndexer)
             )
         )
         hostingView.frame = NSRect(x: 0, y: 0, width: 700, height: 600)

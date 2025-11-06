@@ -4,6 +4,9 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
+    // --- 1. "Catch" the FileIndexer from the environment ---
+    @Environment(FileIndexer.self) private var fileIndexer
+    
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var allSessions: [ChatSession]
     
@@ -20,9 +23,11 @@ struct ContentView: View {
             NavigationStack {
                 if let session = selectedSession {
                     
+                    // --- 2. Pass the fileIndexer into the viewModel ---
                     ChatView(viewModel: ContentViewModel(
                         modelContext: modelContext,
-                        session: session
+                        session: session,
+                        fileIndexer: fileIndexer // <-- Add this argument
                     ))
                     .id(session.id)
                     
@@ -30,12 +35,11 @@ struct ContentView: View {
                     
                     // --- THIS IS THE IMPROVED UI ---
                     VStack(spacing: 16) {
-                        // 1. We keep your nice gradient icon
+                        // ... (your existing empty state UI) ...
                         Image(systemName: "magnifyingglass.circle.fill")
                             .font(.system(size: 50))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
                         
-                        // 2. We add a clearer title and description
                         VStack(spacing: 4) {
                             Text("Welcome to Omni")
                                 .font(.system(size: 20, weight: .bold))
@@ -46,7 +50,6 @@ struct ContentView: View {
                                 .foregroundColor(Color(hex: "AAAAAA"))
                         }
                         
-                        // 3. We use your custom 'StyledButton'
                         StyledButton(
                             title: "Create New Chat",
                             systemImage: "plus",
@@ -71,6 +74,7 @@ struct ContentView: View {
     
     // This is a helper function for the "empty state"
     private func createFirstChat() {
+        // ... (this function is unchanged) ...
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
         

@@ -9,13 +9,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var hotkeyManager: HotkeyManager?
     
-    var calendarService = CalendarService()
+    var fileIndexer: FileIndexer?
     
     let modelContainer: ModelContainer
     
     override init() {
         do {
-            modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self)
+            modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self, IndexedFile.self, FileChunk.self)
+            
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
@@ -26,13 +27,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide from Dock
         NSApp.setActivationPolicy(.accessory)
         
-        // --- THIS IS THE FIX ---
-        // Check the calendar status *before* building the UI
-        calendarService.checkInitialStatus()
-        // --- END OF FIX ---
+        fileIndexer = FileIndexer(modelContainer: modelContainer)
         
         panelController = OmniPanelController(modelContainer: modelContainer,
-                                              calendarService: calendarService)
+                                              fileIndexer: fileIndexer!)
         
         hotkeyManager = HotkeyManager(panelController: panelController)
         
@@ -52,8 +50,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
             
-            button.image = NSImage(systemSymbolName: "magnifyingglass.circle.fill",
+            // --- THIS IS THE CHANGE ---
+            // I've swapped the icon to "brain.head.profile"
+            button.image = NSImage(systemSymbolName: "brain",
                                      accessibilityDescription: "Omni")
+            // --- END OF CHANGE ---
             
             button.action = #selector(togglePanel)
             button.target = self
