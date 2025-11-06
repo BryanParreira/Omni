@@ -9,33 +9,36 @@ struct ChatView: View {
         viewModel.currentSession
     }
     
-    // This sorts the messages by date
     var sortedMessages: [ChatMessage] {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
     
     var body: some View {
         ZStack {
-            // Background
+            // ... (background) ...
             LinearGradient(
                 colors: [Color(hex: "1A1A1A"), Color(hex: "1E1E1E")],
                 startPoint: .top, endPoint: .bottom
             ).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // ===============================================
-                // The custom top bar has been REMOVED
-                // ===============================================
-                
                 // Chat Area
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 16) {
                             ForEach(sortedMessages) { message in
-                                MessageBubbleView(message: message)
-                                    .id(message.id)
-                                    .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                                VStack(alignment: .leading, spacing: 8) {
+                                    MessageBubbleView(message: message)
+                                        .id(message.id)
+                                    
+                                    if !message.isUser, let action = message.suggestedAction {
+                                        // --- 1. PASS THE 'MESSAGE' IN ---
+                                        suggestedActionButton(action: action, message: message)
+                                    }
+                                }
+                                .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
+                            
                             if viewModel.isLoading {
                                 LoadingIndicatorView().transition(.scale.combined(with: .opacity))
                             }
@@ -43,6 +46,7 @@ struct ChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
                     }
+                    // ... (onChange modifiers) ...
                     .onChange(of: session.messages.count) { _, _ in
                         if let lastMessage = sortedMessages.last {
                             withAnimation(.easeOut(duration: 0.3)) {
@@ -57,7 +61,7 @@ struct ChatView: View {
                     }
                 }
                 
-                // Attached Files "Pills" View
+                // ... (Attached Files "Pills" View) ...
                 if !viewModel.attachedFiles.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -74,7 +78,7 @@ struct ChatView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
-                // Input Area
+                // ... (Input Area) ...
                 VStack(spacing: 0) {
                     Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
                     HStack(spacing: 12) {
@@ -121,17 +125,15 @@ struct ChatView: View {
                 }
             }
         }
-        // ===============================================
-        // THIS IS THE FIX:
-        // We add back the native toolbar
-        // ===============================================
+        .environmentObject(viewModel) // This is correct
         .navigationTitle(session.title)
         .toolbar {
+            // ... (toolbar items) ...
             ToolbarItemGroup(placement: .automatic) {
                 Button(action: { viewModel.clearChat() }) {
                     Image(systemName: "trash")
                 }
-                .help("Clear chat (Deletes this session)")
+                .help("Clear chat")
                 
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gear")
@@ -139,7 +141,6 @@ struct ChatView: View {
                 .help("Settings")
             }
         }
-        // ===============================================
         .onChange(of: viewModel.shouldFocusInput) { _, shouldFocus in
             if shouldFocus { isInputFocused = true }
         }
@@ -148,6 +149,44 @@ struct ChatView: View {
         }
     }
     
+    // --- 2. UPDATE THE FUNCTION SIGNATURE ---
+    @ViewBuilder
+    private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
+        let (title, icon) = titleAndIcon(for: action)
+        
+        // --- 3. WIRE UP THE BUTTON ACTION ---
+        Button(action: {
+            // This now calls our new function
+            viewModel.performAction(action: action, on: message)
+        }) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(Color(hex: "EAEAEA"))
+                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .background(Color(hex: "2A2A2A"))
+                .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
+        .padding(.leading, 40) // Indent it under the AI bubble
+    }
+    
+    private func titleAndIcon(for action: String) -> (String, String) {
+        let title: String
+        let icon: String
+        
+        switch action {
+        case "DRAFT_EMAIL":
+            title = "Draft an email with this summary"
+            icon = "square.and.pencil"
+        default:
+            title = action.replacingOccurrences(of: "_", with: " ").capitalized
+            icon = "sparkles"
+        }
+        return (title, icon)
+    }
+    
+    // ... (presentFilePicker function) ...
     func presentFilePicker() {
         let openPanel = NSOpenPanel()
         openPanel.canChooseFiles = true

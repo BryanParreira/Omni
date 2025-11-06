@@ -17,11 +17,9 @@ class LLMManager {
         if provider == "openai" && (apiKey != nil && !apiKey!.isEmpty) {
             return .openAI
         }
-        // TODO: Add cases for Anthropic and Gemini
         return .local
     }
     
-    // NEW: Updated system prompt to ask for actions
     private let systemPrompt = """
     You are a File System Analyst AI assistant.
     
@@ -36,7 +34,6 @@ class LLMManager {
     - Only suggest one action.
     """
     
-    // NEW: Return type now includes an optional action
     func generateResponse(query: String, context: String) async throws -> (content: String, action: String?) {
         
         let responseText: String
@@ -56,11 +53,9 @@ class LLMManager {
             )
         }
         
-        // NEW: Parse the response
         return parseResponseForAction(responseText)
     }
     
-    // NEW: Helper function to find and strip the action tag
     private func parseResponseForAction(_ text: String) -> (content: String, action: String?) {
         // Look for a tag like [ACTION: DRAFT_EMAIL]
         if let range = text.range(of: "[ACTION:", options: .backwards) {
@@ -68,7 +63,19 @@ class LLMManager {
             if let endRange = tagPart.range(of: "]") {
                 let actionTag = tagPart[range.upperBound..<endRange.lowerBound]
                 let cleanContent = text[..<range.lowerBound].trimmingCharacters(in: .whitespacesAndNewlines)
-                return (content: cleanContent, action: String(actionTag))
+                
+                // --- THIS IS THE FIX ---
+                // We trim whitespace and newlines from the action tag,
+                // just in case the LLM adds extra spaces.
+                let cleanAction = String(actionTag).trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                // If the tag was just whitespace, count it as no action
+                if cleanAction.isEmpty {
+                    return (content: cleanContent, action: nil)
+                }
+                
+                return (content: cleanContent, action: cleanAction)
+                // --- END OF FIX ---
             }
         }
         

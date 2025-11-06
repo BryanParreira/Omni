@@ -1,26 +1,26 @@
 import SwiftUI
 import Combine
 import SwiftData
+import AppKit // <-- 1. ADD THIS IMPORT
 
 @MainActor
 class ContentViewModel: ObservableObject {
     
-    // --- Properties ---
+    // ... (all your existing properties) ...
     var modelContext: ModelContext
     @Published var currentSession: ChatSession
-    
     @Published var inputText: String = ""
     @Published var isLoading: Bool = false
     @Published var shouldFocusInput: Bool = false
     @Published var attachedFiles: [URL] = []
-    
     private let searchService = FileSearchService()
     
-    // REVERTED: Init no longer accepts FileIndexer
     init(modelContext: ModelContext, session: ChatSession) {
         self.modelContext = modelContext
         self.currentSession = session
     }
+    
+    // ... (all your existing functions: focusInput, addAttachedFiles, removeAttachment, sendMessage, clearChat) ...
     
     func focusInput() {
         shouldFocusInput = true
@@ -48,8 +48,6 @@ class ContentViewModel: ObservableObject {
         let userAttachments = attachedFiles
         
         inputText = ""
-        // Files are kept for conversational memory
-        
         let sourceFilePaths = userAttachments.map { $0.path }
         
         let userMessage = ChatMessage(
@@ -73,7 +71,6 @@ class ContentViewModel: ObservableObject {
                 var context = "No file context found."
                 var finalSourceFilePaths: [String] = []
                 
-                // REVERTED: No FileIndexer logic
                 if !userAttachments.isEmpty {
                     let reader = FileSearchService()
                     var fileContents: [String] = []
@@ -105,7 +102,8 @@ class ContentViewModel: ObservableObject {
                 botMessage = ChatMessage(
                     content: aiResponse.content,
                     isUser: false,
-                    sources: finalSourceFilePaths.isEmpty ? nil : finalSourceFilePaths
+                    sources: finalSourceFilePaths.isEmpty ? nil : finalSourceFilePaths,
+                    suggestedAction: aiResponse.action
                 )
                 
             } catch {
@@ -134,9 +132,34 @@ class ContentViewModel: ObservableObject {
             sources: nil
         )
         currentSession.messages.append(welcomeMessage)
-        currentSession.title = "New Chat" // Reset title
+        currentSession.title = "New Chat"
         
         try? modelContext.save()
         self.attachedFiles = []
     }
+    
+    // --- 2. ADD THIS NEW FUNCTION ---
+    func performAction(action: String, on message: ChatMessage) {
+        switch action {
+        case "DRAFT_EMAIL":
+            // Get the content from the message
+            let summary = message.content
+            
+            // Create a URL-encoded mailto link
+            let subject = "Summary"
+            guard let encodedBody = summary.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                  let mailtoURL = URL(string: "mailto:?subject=\(subject)&body=\(encodedBody)")
+            else {
+                print("Error creating mailto link")
+                return
+            }
+            
+            // Open the user's default Mail app
+            NSWorkspace.shared.open(mailtoURL)
+            
+        default:
+            print("Unknown action: \(action)")
+        }
+    }
+    // --- END OF NEW FUNCTION ---
 }
