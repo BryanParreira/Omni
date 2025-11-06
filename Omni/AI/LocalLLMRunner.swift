@@ -1,23 +1,27 @@
 import Foundation
 
 // MARK: - Ollama Codable Structs
-private struct OllamaGenerateRequest: Codable {
+
+// --- FIX: This struct is only ever ENCODED, not decoded ---
+private struct OllamaGenerateRequest: Encodable {
     let model: String
     let prompt: String
+    // This line is now fine because the struct isn't Decodable
     let stream: Bool = false
 }
 
-private struct OllamaGenerateResponse: Codable {
+// --- FIX: This struct is only ever DECODED ---
+private struct OllamaGenerateResponse: Decodable {
     let response: String
 }
 
 // These structs were declared in the old LocalLLMService and were conflicting.
 // They now live here.
-private struct OllamaTagsResponse: Codable {
+private struct OllamaTagsResponse: Decodable {
     let models: [OllamaModel]
 }
 
-struct OllamaModel: Codable, Identifiable {
+struct OllamaModel: Decodable, Identifiable {
     let name: String
     var id: String { name }
 }

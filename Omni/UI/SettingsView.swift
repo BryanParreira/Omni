@@ -222,12 +222,15 @@ struct AISettingsView: View {
                             Text("Local LLM").tag("local")
                         }
                         .pickerStyle(.segmented)
-                        .onChange(of: selectedProvider) { newValue in
+                        // --- THIS IS THE FIX ---
+                        // Use the modern .onChange(of: { oldValue, newValue in ... })
+                        .onChange(of: selectedProvider) { oldValue, newValue in
                             if newValue == "local" {
                                 loadOllamaModels()
                             }
                             updateDefaultModel(for: newValue)
                         }
+                        // --- END OF FIX ---
                     }
                 )
                 

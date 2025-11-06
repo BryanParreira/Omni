@@ -7,12 +7,6 @@ class HotkeyManager {
     weak var panelController: OmniPanelController?
     private var eventHandler: EventHandlerRef?
     
-    // --- THIS IS THE FIX ---
-    // This "lock" prevents the hotkey from firing a dozen times
-    // if you press it rapidly.
-    private var isCapturingContext = false
-    // --- END OF FIX ---
-    
     init(panelController: OmniPanelController?) {
         self.panelController = panelController
     }
@@ -44,41 +38,14 @@ class HotkeyManager {
         
         let callback: EventHandlerUPP = { _, event, userData in
             guard let userData = userData else { return noErr }
+            
+            // --- THIS IS THE FIX ---
+            // Changed 'takeUnpinnedRef()' to 'takeUnretainedValue()'
             let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
+            // --- END OF FIX ---
             
-            // --- MODIFICATION START ---
-            
-            // If we are already busy, ignore this key press.
-            guard !manager.isCapturingContext else {
-                print("Hotkey pressed, but context capture is already in progress. Ignoring.")
-                return noErr
-            }
-            
-            // Set the lock
-            manager.isCapturingContext = true
-            
-            ContextCaptureService.shared.captureCurrentContext { [weak manager] capturedText in
-                if let text = capturedText, !text.isEmpty {
-                    print("--- OMNI: CONTEXT CAPTURED ---")
-                    print(text)
-                    print("---------------------------------")
-                } else {
-                    print("--- OMNI: CONTEXT CAPTURED ---")
-                    print("No text was captured from the active window.")
-                    print("---------------------------------")
-                }
-                
-                // TODO: Pass 'capturedText' to the panelController
-                
-                // Toggle the panel
-                manager?.panelController?.toggle()
-                
-                // --- THIS IS THE FIX ---
-                // Release the lock so the hotkey can be used again.
-                manager?.isCapturingContext = false
-                // --- END OF FIX ---
-            }
-            // --- MODIFICATION END ---
+            // Now it just toggles the panel.
+            manager.panelController?.toggle()
             
             return noErr
         }

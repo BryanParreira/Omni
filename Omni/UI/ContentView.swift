@@ -4,6 +4,8 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
+    // REVERTED: No @Environment(FileIndexer.self)
+    
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var allSessions: [ChatSession]
     
@@ -19,14 +21,14 @@ struct ContentView: View {
             
             NavigationStack {
                 if let session = selectedSession {
-                    ChatView(viewModel: ContentViewModel(modelContext: modelContext, session: session))
-                        .id(session.id)
-                        
-                        // ===============================================
-                        // We have REMOVED the .toolbar(.hidden) modifier
-                        // This will let the sidebar toggle button appear.
-                        // ===============================================
-                        
+                    
+                    // REVERTED: No fileIndexer argument
+                    ChatView(viewModel: ContentViewModel(
+                        modelContext: modelContext,
+                        session: session
+                    ))
+                    .id(session.id)
+                    
                 } else {
                     // Show this if no chat is selected
                     VStack {
@@ -42,7 +44,6 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(hex: "1A1A1A"))
-                    // We also removed .toolbar(.hidden) from here
                 }
             }
         }

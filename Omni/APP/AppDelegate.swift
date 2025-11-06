@@ -9,7 +9,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var hotkeyManager: HotkeyManager?
     
-    // 1. The AppDelegate creates and owns the database
+    var calendarService = CalendarService()
+    
     let modelContainer: ModelContainer
     
     override init() {
@@ -25,17 +26,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide from Dock
         NSApp.setActivationPolicy(.accessory)
         
-        // --- PERMISSION CHECKS ---
-        // This will check for Accessibility permission on app launch.
-        PermissionsHelper.checkAndRequestAccessibility()
+        // --- PERMISSION CHECKS REMOVED ---
         
-        // This will check for Screen Recording permission (for OCR).
-        PermissionsHelper.checkAndRequestScreenCapture()
-        // --- END OF ADDITIONS ---
+        panelController = OmniPanelController(modelContainer: modelContainer,
+                                              calendarService: calendarService)
         
-        // 2. We pass the database container to the panel controller
-        //    (This fixes your "Extra argument 'viewModel'" error)
-        panelController = OmniPanelController(modelContainer: modelContainer)
         hotkeyManager = HotkeyManager(panelController: panelController)
         
         // Setup status bar
