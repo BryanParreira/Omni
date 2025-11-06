@@ -1,7 +1,7 @@
 import SwiftUI
 import Combine
 import SwiftData
-import AppKit // <-- 1. ADD THIS IMPORT
+import AppKit
 
 @MainActor
 class ContentViewModel: ObservableObject {
@@ -16,12 +16,12 @@ class ContentViewModel: ObservableObject {
     private let searchService = FileSearchService()
     
     init(modelContext: ModelContext, session: ChatSession) {
+        // ... (init is unchanged) ...
         self.modelContext = modelContext
         self.currentSession = session
     }
     
-    // ... (all your existing functions: focusInput, addAttachedFiles, removeAttachment, sendMessage, clearChat) ...
-    
+    // ... (focusInput, addAttachedFiles, removeAttachment) ...
     func focusInput() {
         shouldFocusInput = true
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -42,6 +42,7 @@ class ContentViewModel: ObservableObject {
     }
 
     func sendMessage() {
+        // ... (sendMessage is unchanged) ...
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
         let userMessageText = inputText
@@ -96,7 +97,8 @@ class ContentViewModel: ObservableObject {
                 
                 let aiResponse = try await LLMManager.shared.generateResponse(
                     query: userMessageText,
-                    context: context
+                    context: context,
+                    files: userAttachments
                 )
                 
                 botMessage = ChatMessage(
@@ -122,6 +124,7 @@ class ContentViewModel: ObservableObject {
     }
     
     func clearChat() {
+        // ... (clearChat is unchanged) ...
         for message in currentSession.messages {
             modelContext.delete(message)
         }
@@ -138,14 +141,12 @@ class ContentViewModel: ObservableObject {
         self.attachedFiles = []
     }
     
-    // --- 2. ADD THIS NEW FUNCTION ---
+    // --- THIS IS THE FIX ---
+    // We add all our new actions to the 'switch' statement
     func performAction(action: String, on message: ChatMessage) {
         switch action {
         case "DRAFT_EMAIL":
-            // Get the content from the message
             let summary = message.content
-            
-            // Create a URL-encoded mailto link
             let subject = "Summary"
             guard let encodedBody = summary.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                   let mailtoURL = URL(string: "mailto:?subject=\(subject)&body=\(encodedBody)")
@@ -153,13 +154,44 @@ class ContentViewModel: ObservableObject {
                 print("Error creating mailto link")
                 return
             }
-            
-            // Open the user's default Mail app
             NSWorkspace.shared.open(mailtoURL)
+            
+        case "SUMMARIZE_DOCUMENT":
+            // "Copy this summary" action
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(message.content, forType: .string)
+            
+        case "EXPLAIN_CODE", "FIND_BUGS", "ANALYZE_DATA", "FIND_TRENDS":
+            // For these actions, let's pre-fill the user's input
+            // text and let them send the new message.
+            let (title, _) = titleAndIcon(for: action) // Get the button title
+            self.inputText = title // Set the text field
+            self.focusInput() // Focus the text field
             
         default:
             print("Unknown action: \(action)")
         }
     }
-    // --- END OF NEW FUNCTION ---
+    
+    // Helper to get the button title (to avoid duplicating logic)
+    private func titleAndIcon(for action: String) -> (String, String) {
+        switch action {
+        case "DRAFT_EMAIL":
+            return ("Draft an email with this summary", "square.and.pencil")
+        case "SUMMARIZE_DOCUMENT":
+            return ("Copy this summary", "doc.on.doc")
+        case "EXPLAIN_CODE":
+            return ("Explain this code", "doc.text.magnifyingglass")
+        case "FIND_BUGS":
+            return ("Find potential bugs in this code", "ant")
+        case "ANALYZE_DATA":
+            return ("Analyze this data", "chart.bar")
+        case "FIND_TRENDS":
+            return ("Find trends in this data", "chart.line.uptrend.xyaxis")
+        default:
+            return (action.replacingOccurrences(of: "_", with: " ").capitalized, "sparkles")
+        }
+    }
+    // --- END OF FIX ---
 }

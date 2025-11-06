@@ -32,7 +32,6 @@ struct ChatView: View {
                                         .id(message.id)
                                     
                                     if !message.isUser, let action = message.suggestedAction {
-                                        // --- 1. PASS THE 'MESSAGE' IN ---
                                         suggestedActionButton(action: action, message: message)
                                     }
                                 }
@@ -125,7 +124,7 @@ struct ChatView: View {
                 }
             }
         }
-        .environmentObject(viewModel) // This is correct
+        .environmentObject(viewModel)
         .navigationTitle(session.title)
         .toolbar {
             // ... (toolbar items) ...
@@ -149,14 +148,11 @@ struct ChatView: View {
         }
     }
     
-    // --- 2. UPDATE THE FUNCTION SIGNATURE ---
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
         let (title, icon) = titleAndIcon(for: action)
         
-        // --- 3. WIRE UP THE BUTTON ACTION ---
         Button(action: {
-            // This now calls our new function
             viewModel.performAction(action: action, on: message)
         }) {
             Label(title, systemImage: icon)
@@ -168,9 +164,11 @@ struct ChatView: View {
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)
-        .padding(.leading, 40) // Indent it under the AI bubble
+        .padding(.leading, 40)
     }
     
+    // --- THIS IS THE FIX ---
+    // We add all our new actions to this helper
     private func titleAndIcon(for action: String) -> (String, String) {
         let title: String
         let icon: String
@@ -179,15 +177,31 @@ struct ChatView: View {
         case "DRAFT_EMAIL":
             title = "Draft an email with this summary"
             icon = "square.and.pencil"
+        case "SUMMARIZE_DOCUMENT":
+            title = "Copy this summary"
+            icon = "doc.on.doc"
+        case "EXPLAIN_CODE":
+            title = "Explain this code"
+            icon = "doc.text.magnifyingglass"
+        case "FIND_BUGS":
+            title = "Find potential bugs in this code"
+            icon = "ant"
+        case "ANALYZE_DATA":
+            title = "Analyze this data"
+            icon = "chart.bar"
+        case "FIND_TRENDS":
+            title = "Find trends in this data"
+            icon = "chart.line.uptrend.xyaxis"
         default:
             title = action.replacingOccurrences(of: "_", with: " ").capitalized
             icon = "sparkles"
         }
         return (title, icon)
     }
+    // --- END OF FIX ---
     
-    // ... (presentFilePicker function) ...
     func presentFilePicker() {
+        // ... (function is unchanged) ...
         let openPanel = NSOpenPanel()
         openPanel.canChooseFiles = true
         openPanel.canChooseDirectories = false
