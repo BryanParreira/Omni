@@ -26,7 +26,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Hide from Dock
         NSApp.setActivationPolicy(.accessory)
         
-        // --- PERMISSION CHECKS REMOVED ---
+        // --- THIS IS THE FIX ---
+        // Check the calendar status *before* building the UI
+        calendarService.checkInitialStatus()
+        // --- END OF FIX ---
         
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               calendarService: calendarService)

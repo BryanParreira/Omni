@@ -3,17 +3,17 @@ import SwiftData
 
 @main
 struct OmniApp: App {
-    // This connects your custom AppDelegate
+    
+    // 1. This tells the app to use your AppDelegate
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     
+    // 2. This is the fix: We replace the 'WindowGroup'
+    //    with a 'Settings' scene. This stops the app
+    //    from opening a blank window on launch.
     var body: some Scene {
-        // We do NOT have a WindowGroup here.
-        // Your AppDelegate is in full control of the chat panel.
-        
         Settings {
-            // This is for the *separate* settings window (Cmd + ,)
-            // We will make our gear button open this instead.
-            SettingsView()
+            // We can put your settings view here later if you want
+            // For now, it's just a placeholder.
         }
     }
 }

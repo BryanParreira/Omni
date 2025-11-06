@@ -4,17 +4,12 @@ import EventKit // Import EventKit
 
 struct SidebarView: View {
     @Environment(\.modelContext) private var modelContext
-    
     @Environment(CalendarService.self) private var calendarService
     
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var chatSessions: [ChatSession]
     
     @Binding var selectedSession: ChatSession?
-    
-    // --- 1. NEW STATE VARIABLE ---
-    // We need to know if we've checked permission yet
-    @State private var hasCheckedPermission = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +28,7 @@ struct SidebarView: View {
                 .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
             
-            // Add the new calendar section
+            // Calendar section
             calendarSection()
                 .padding(.vertical, 8)
             
@@ -42,25 +37,28 @@ struct SidebarView: View {
                 .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
             
-            // List of all your past chats
+            // List of chats
             List(chatSessions, selection: $selectedSession) { session in
                 Text(session.title)
                     .font(.system(size: 13))
                     .lineLimit(1)
                     .tag(session)
+                    // --- NEW FEATURE ---
+                    // Add a right-click context menu
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            deleteSession(session)
+                        } label: {
+                            Label("Delete Chat", systemImage: "trash")
+                        }
+                    }
+                    // --- END OF FEATURE ---
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
         }
         .background(Color(hex: "1E1E1E"))
-        .onAppear {
-            // --- 2. MODIFIED onAppear ---
-            // Just check the status. This is safe and won't crash.
-            Task {
-                await calendarService.fetchUpcomingEvents()
-                hasCheckedPermission = true
-            }
-        }
+        // We're done with onAppear, the logic is in the AppDelegate now
     }
     
     /// Creates the UI for the "Today's Events" section
@@ -72,19 +70,15 @@ struct SidebarView: View {
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.horizontal)
             
-            // --- 3. SIMPLIFIED LOGIC ---
-            if !hasCheckedPermission {
-                // Show nothing while we're checking
-                EmptyView()
-                
-            } else if calendarService.isAccessDenied {
+            // This logic now works on launch because
+            // 'isAccessDenied' is set by the AppDelegate
+            if calendarService.isAccessDenied {
                 // Case 1: User has denied permission
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Calendar is not connected.")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(Color(hex: "EAEAEA"))
                     
-                    // This button now opens settings
                     Button("Grant Access") {
                         calendarService.openPrivacySettings()
                     }
@@ -93,13 +87,15 @@ struct SidebarView: View {
                     .foregroundColor(Color(hex: "FF8E53"))
                 }
                 .padding(.horizontal)
-                
-            } else if calendarService.upcomingEvents.isEmpty {
-                // Case 2: Permission not yet granted, OR granted and no events
-                
-                // We show this "Grant Access" button if status is "notDetermined"
+
+            } else if calendarService.currentStatus == .notDetermined {
+                // Case 2: We haven't asked yet.
                 Button {
-                    Task { await calendarService.requestAccess() }
+                    Task {
+                        // Add the delay back to prevent layout crash
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                        await calendarService.requestAccess()
+                    }
                 } label: {
                     Text("Connect Calendar")
                         .font(.system(size: 12))
@@ -108,8 +104,24 @@ struct SidebarView: View {
                 .buttonStyle(.plain)
                 .padding(.horizontal)
 
+            } else if calendarService.upcomingEvents.isEmpty {
+                // Case 3: Permission given, but no events
+                HStack {
+                    Text("No upcoming events today.")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "888888"))
+                    Spacer()
+                    Button(action: {
+                        Task { await calendarService.fetchUpcomingEvents() }
+                    }) {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal)
+                
             } else {
-                // Case 3: Show the upcoming events (max 3)
+                // Case 4: Show the upcoming events
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(calendarService.upcomingEvents.prefix(3), id: \.eventIdentifier) { event in
                         eventRow(event)
@@ -122,7 +134,6 @@ struct SidebarView: View {
     
     /// Creates a single row for an event
     private func eventRow(_ event: EKEvent) -> some View {
-        // ... (this function is unchanged) ...
         HStack(spacing: 6) {
             Circle()
                 .fill(Color(cgColor: event.calendar.cgColor))
@@ -143,7 +154,6 @@ struct SidebarView: View {
     }
     
     private func createNewChat() {
-        // ... (this function is unchanged) ...
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
         
@@ -158,4 +168,16 @@ struct SidebarView: View {
         
         selectedSession = newSession
     }
+    
+    // --- NEW FUNCTION ---
+    private func deleteSession(_ session: ChatSession) {
+        // If the user deletes the chat they're looking at,
+        // we need to deselect it.
+        if selectedSession == session {
+            selectedSession = nil
+        }
+        modelContext.delete(session)
+        try? modelContext.save()
+    }
+    // --- END NEW FUNCTION ---
 }

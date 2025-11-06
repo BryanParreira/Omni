@@ -1,5 +1,5 @@
 import Foundation
-import EventKit // Apple's Calendar framework
+import EventKit
 import SwiftUI
 
 @MainActor
@@ -8,80 +8,75 @@ class CalendarService {
     
     private let eventStore = EKEventStore()
     
+    // UI-driving properties
     var upcomingEvents: [EKEvent] = []
+    
+    // --- THIS IS THE FIX ---
+    // We re-add 'isAccessDenied' so the app can know the status on launch
     var isAccessDenied: Bool = false
     
+    var currentStatus: EKAuthorizationStatus {
+        EKEventStore.authorizationStatus(for: .event)
+    }
+    
+    // --- NEW FUNCTION ---
+    // This is safe to call on app launch. It doesn't
+    // trigger any pop-ups, it just checks the current state.
+    func checkInitialStatus() {
+        switch currentStatus {
+        case .denied, .restricted:
+            self.isAccessDenied = true
+        case .fullAccess:
+            self.isAccessDenied = false
+            Task { await fetchUpcomingEvents() }
+        case .notDetermined, .writeOnly:
+            self.isAccessDenied = false
+        @unknown default:
+            self.isAccessDenied = false
+        }
+    }
+    
     /// Requests access to the user's calendar.
-    func requestAccess() async -> Bool {
+    func requestAccess() async {
         do {
-            // --- FIX: Use new macOS 14 API ---
-            // 'requestAccess(to:)' is deprecated.
-            // We'll convert the new completion-handler API to async.
             let granted = try await eventStore.requestFullAccessToEvents()
-            // --- END OF FIX ---
             
             if granted {
-                // Access granted! Fetch events.
-                await fetchUpcomingEvents()
                 self.isAccessDenied = false
+                await fetchUpcomingEvents()
             } else {
-                // Access was denied.
                 self.isAccessDenied = true
             }
-            return granted
         } catch {
             print("Failed to request calendar access: \(error)")
             self.isAccessDenied = true
-            return false
         }
     }
     
     /// Fetches today's upcoming events from the calendar.
     func fetchUpcomingEvents() async {
-        let status = EKEventStore.authorizationStatus(for: .event)
-        
-        // --- FIX: Use new macOS 14 API ---
-        // '.authorized' is deprecated. We now check for '.fullAccess'.
-        guard status == .fullAccess else {
-        // --- END OF FIX ---
-            if status == .notDetermined {
-                // We've never asked, so just show the button.
-            } else if status == .denied || status == .restricted {
-                // User has previously denied access
-                self.isAccessDenied = true
-            }
-            return // Don't proceed if not authorized
+        guard currentStatus == .fullAccess else {
+            print("Cannot fetch, access not granted.")
+            return
         }
         
-        // We are authorized, let's fetch events.
-        self.isAccessDenied = false
-        
-        // Create a date range for "today"
         let calendar = Calendar.current
         let today = Date()
         let startOfToday = calendar.startOfDay(for: today)
         let endOfToday = calendar.date(byAdding: .day, value: 1, to: startOfToday)!
         
-        // Create a predicate to search for events
         let predicate = eventStore.predicateForEvents(
             withStart: startOfToday,
             end: endOfToday,
-            calendars: nil // nil = all calendars
+            calendars: nil
         )
         
-        // Fetch the events
         let events = eventStore.events(matching: predicate)
         
-        // Filter out all-day events and ones that have already passed
         self.upcomingEvents = events.filter {
             !$0.isAllDay && $0.endDate > Date()
         }
-        .sorted(by: { $0.startDate < $1.startDate }) // Sort by start time
-    }
-    
-    /// Opens the Calendar app for the user
-    func openCalendar() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/Calendar.app"))
+        .sorted(by: { $0.startDate < $1.startDate })
     }
 
     /// Opens System Settings to the "Privacy & Security" pane

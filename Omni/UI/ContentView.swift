@@ -4,8 +4,6 @@ import SwiftData
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     
-    // REVERTED: No @Environment(FileIndexer.self)
-    
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var allSessions: [ChatSession]
     
@@ -22,7 +20,6 @@ struct ContentView: View {
             NavigationStack {
                 if let session = selectedSession {
                     
-                    // REVERTED: No fileIndexer argument
                     ChatView(viewModel: ContentViewModel(
                         modelContext: modelContext,
                         session: session
@@ -30,20 +27,37 @@ struct ContentView: View {
                     .id(session.id)
                     
                 } else {
-                    // Show this if no chat is selected
-                    VStack {
+                    
+                    // --- THIS IS THE IMPROVED UI ---
+                    VStack(spacing: 16) {
+                        // 1. We keep your nice gradient icon
                         Image(systemName: "magnifyingglass.circle.fill")
-                            .font(.system(size: 40))
+                            .font(.system(size: 50))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
-                        Text("Select a chat or start a new one")
-                            .font(.title2)
-                            .foregroundColor(Color(hex: "AAAAAA"))
                         
-                        Button("Create New Chat", action: createFirstChat)
-                            .padding(.top)
+                        // 2. We add a clearer title and description
+                        VStack(spacing: 4) {
+                            Text("Welcome to Omni")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(Color(hex: "EAEAEA"))
+                            
+                            Text("Select a chat or start a new one to begin.")
+                                .font(.system(size: 14))
+                                .foregroundColor(Color(hex: "AAAAAA"))
+                        }
+                        
+                        // 3. We use your custom 'StyledButton'
+                        StyledButton(
+                            title: "Create New Chat",
+                            systemImage: "plus",
+                            action: createFirstChat
+                        )
+                        .padding(.top, 8)
+                        
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(hex: "1A1A1A"))
+                    // --- END OF IMPROVED UI ---
                 }
             }
         }
