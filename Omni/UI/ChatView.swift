@@ -16,6 +16,19 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
     
+    // --- 1. THIS IS THE FIX for the "File Pill" Bug ---
+    // This logic determines if we should show the "file pills"
+    private var shouldShowFilePills: Bool {
+        let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
+        // Check if any message in the history *already* has sources
+        let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
+        
+        // Only show the pills if we have files attached AND
+        // no messages have been sent with them yet.
+        return hasAttachedFiles && !hasMessagesWithSources
+    }
+    // --- END OF FIX ---
+    
     var body: some View {
         ZStack {
             LinearGradient(
@@ -24,7 +37,7 @@ struct ChatView: View {
             ).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // ... (Chat Area) ...
+                // Chat Area
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 16) {
@@ -61,8 +74,10 @@ struct ChatView: View {
                     }
                 }
                 
-                // ... (File Pills) ...
-                if !viewModel.currentSession.attachedFileURLs.isEmpty {
+                // --- 2. THIS IS THE FIX ---
+                // We now use our new helper variable to decide
+                // whether to show this view or not.
+                if shouldShowFilePills {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(viewModel.currentSession.attachedFileURLs, id: \.self) { url in
@@ -77,8 +92,9 @@ struct ChatView: View {
                     .background(Color(hex: "242424"))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+                // --- END OF FIX ---
                 
-                // ... (Input Area) ...
+                // Input Area
                 VStack(spacing: 0) {
                     Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
                     HStack(spacing: 12) {
@@ -138,14 +154,10 @@ struct ChatView: View {
                 }
                 .help("Clear chat")
                 
-                // --- THIS IS THE FIX ---
-                // We are using a NavigationLink again, which
-                // pushes the view inside the existing panel.
                 NavigationLink(destination: SettingsView()) {
                     Image(systemName: "gear")
                 }
                 .help("Settings")
-                // --- END OF FIX ---
             }
         }
         .onDrop(of: [UTType.fileURL], isTargeted: $isDropTarget) { providers in

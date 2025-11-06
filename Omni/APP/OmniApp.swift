@@ -10,12 +10,11 @@ struct OmniApp: App {
     var body: some Scene {
         
         // --- THIS IS THE FIX ---
-        // We remove the 'Settings' scene.
-        // This stops the app from trying to open a new window.
-        // We need a placeholder, so we use an empty scene.
-        WindowGroup(id: "placeholder") {
-            // This window will never be shown because our
-            // app is a menu bar app (.accessory).
+        // We define the Settings scene, which tells the app
+        // not to open a main window by default.
+        // This will make the blank "Omni" window disappear forever.
+        Settings {
+            SettingsView()
         }
         // --- END OF FIX ---
     }
