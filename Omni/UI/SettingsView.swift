@@ -68,7 +68,7 @@ private func settingsCard<Content: View>(
 
 
 // ===============================================
-// MAIN SETTINGS VIEW
+// MAIN SETTINGS VIEW (Reverted to TabView)
 // ===============================================
 
 struct SettingsView: View {
@@ -93,7 +93,9 @@ struct SettingsView: View {
             )
             .ignoresSafeArea()
             
-            // Content area
+            // --- THIS IS THE FIX ---
+            // We are using a TabView again, which works
+            // correctly inside a NavigationLink.
             TabView {
                 GeneralSettingsView()
                     .tabItem {
@@ -118,14 +120,11 @@ struct SettingsView: View {
                         Label("About", systemImage: "info.circle")
                     }
             }
-            .background(Color(hex: "1A1A1A")) // Tab content background
-            .accentColor(Color(hex: "FF6B6B")) // Tab bar accent
+            // --- END OF FIX ---
+            .background(Color(hex: "1A1A1A"))
+            .accentColor(Color(hex: "FF6B6B"))
         }
-        .navigationTitle("Settings") // This adds the title to the native bar
-        
-        // ===============================================
-        // .clipShape() and .shadow() have been REMOVED
-        // ===============================================
+        .navigationTitle("Settings") // This adds the title
     }
 }
 
@@ -222,15 +221,12 @@ struct AISettingsView: View {
                             Text("Local LLM").tag("local")
                         }
                         .pickerStyle(.segmented)
-                        // --- THIS IS THE FIX ---
-                        // Use the modern .onChange(of: { oldValue, newValue in ... })
                         .onChange(of: selectedProvider) { oldValue, newValue in
                             if newValue == "local" {
                                 loadOllamaModels()
                             }
                             updateDefaultModel(for: newValue)
                         }
-                        // --- END OF FIX ---
                     }
                 )
                 
@@ -587,7 +583,7 @@ struct AboutView: View {
         VStack(spacing: 20) {
             Spacer()
             
-            Image(systemName: "magnifyingglass.circle.fill")
+            Image(systemName: "brain")
                 .font(.system(size: 64))
                 .foregroundStyle(
                     LinearGradient(
@@ -624,7 +620,7 @@ struct AboutView: View {
             Spacer()
             
             HStack(spacing: 20) {
-                Link("Documentation", destination: URL(string: "https://github.com/BryanParreira/Omni")!)
+                Link("Documentation", destination: URL(string: "https://github.com")!)
                 Text("•")
                     .foregroundColor(Color(hex: "8A8A8A"))
                 Link("Report Issue", destination: URL(string: "https://github.com")!)
