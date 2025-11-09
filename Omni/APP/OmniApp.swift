@@ -9,13 +9,11 @@ struct OmniApp: App {
     
     var body: some Scene {
         
-        // --- THIS IS THE FIX ---
-        // We define the Settings scene, which tells the app
-        // not to open a main window by default.
-        // This will make the blank "Omni" window disappear forever.
+        // This scene tells macOS the app has settings
+        // and (most importantly) prevents a default, blank
+        // window from opening on launch.
         Settings {
             SettingsView()
         }
-        // --- END OF FIX ---
     }
 }

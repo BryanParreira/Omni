@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 // ===============================================
 // HELPER VIEWS (Unchanged)
@@ -68,16 +69,23 @@ private func settingsCard<Content: View>(
 
 
 // ===============================================
-// MAIN SETTINGS VIEW (Reverted to TabView)
+// MAIN SETTINGS VIEW (Updated)
 // ===============================================
 
 struct SettingsView: View {
+    // --- 🛑 NEW: DISMISS ACTION 🛑 ---
+    @Environment(\.dismiss) private var dismiss
+    
     // MARK: - AppStorage Properties
     @AppStorage("openai_api_key") private var openAIKey: String = ""
     @AppStorage("anthropic_api_key") private var anthropicKey: String = ""
     @AppStorage("gemini_api_key") private var geminiKey: String = ""
     @AppStorage("selected_provider") private var selectedProvider: String = "openai"
     @AppStorage("selected_model") private var selectedModel: String = "gpt-4o-mini"
+    
+    // --- REMOVED ---
+    // @AppStorage("selectedAppearance") private var selectedAppearance: Appearance = .system
+    // --- END REMOVED ---
     
     // MARK: - State Properties
     @State private var showAPIKey = false
@@ -93,9 +101,9 @@ struct SettingsView: View {
             )
             .ignoresSafeArea()
             
-            // --- THIS IS THE FIX ---
-            // We are using a TabView again, which works
-            // correctly inside a NavigationLink.
+            // --- 🛑 REMOVED THE EXTRA VSTACK 🛑 ---
+            
+            // Using TabView as it's stable and works
             TabView {
                 GeneralSettingsView()
                     .tabItem {
@@ -120,11 +128,20 @@ struct SettingsView: View {
                         Label("About", systemImage: "info.circle")
                     }
             }
-            // --- END OF FIX ---
             .background(Color(hex: "1A1A1A"))
             .accentColor(Color(hex: "FF6B6B"))
+            // --- 🛑 NEW: TOOLBAR FOR DONE BUTTON 🛑 ---
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .accentColor(Color(hex: "FF6B6B")) // Style the Done button
+                }
+            }
+            // --- 🛑 END OF NEW TOOLBAR 🛑 ---
         }
-        .navigationTitle("Settings") // This adds the title
+        .navigationTitle("Settings") // This line correctly adds the "Settings" title
     }
 }
 
@@ -133,9 +150,17 @@ struct SettingsView: View {
 struct GeneralSettingsView: View {
     @AppStorage("selected_search_scope") private var selectedSearchScope: String = "home"
     
+    // --- REMOVED ---
+    // @AppStorage("selectedAppearance") private var selectedAppearance: Appearance = .system
+    // --- END REMOVED ---
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                
+                // --- REMOVED ---
+                // The "Appearance" settingsCard has been deleted.
+                // --- END REMOVED ---
                 
                 settingsCard(
                     title: "Search Scope",
@@ -193,6 +218,7 @@ struct GeneralSettingsView: View {
 // MARK: - AI Settings Tab
 
 struct AISettingsView: View {
+    // ... (This struct is unchanged) ...
     @Binding var openAIKey: String
     @Binding var anthropicKey: String
     @Binding var geminiKey: String
@@ -502,6 +528,7 @@ struct AISettingsView: View {
     }
     
     private func testAPIKey() {
+        // ... (function is unchanged) ...
         Task {
             await MainActor.run {
                 isTestingConnection = true
@@ -570,7 +597,7 @@ struct AISettingsView: View {
 // MARK: - About Tab
 
 struct AboutView: View {
-    
+    // ... (This struct is unchanged) ...
     private var appVersion: String {
         guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
               let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String else {

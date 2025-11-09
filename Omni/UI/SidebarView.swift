@@ -74,6 +74,23 @@ struct SidebarView: View {
             }
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
+            
+            // --- 🛑 NEW SETTINGS BUTTON 🛑 ---
+            Spacer() // Pushes the button to the bottom
+            
+            Rectangle()
+                .fill(Color(hex: "2A2A2A"))
+                .frame(height: 1)
+            
+            NavigationLink(destination: SettingsView()) {
+                Label("Settings", systemImage: "gear")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "EAEAEA"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .padding()
+            // --- 🛑 END OF NEW BUTTON 🛑 ---
         }
         .background(Color(hex: "1E1E1E"))
     }

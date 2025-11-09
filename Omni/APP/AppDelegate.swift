@@ -8,15 +8,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var panelController: OmniPanelController?
     var statusItem: NSStatusItem?
     var hotkeyManager: HotkeyManager?
-    
     var fileIndexer: FileIndexer?
+    
+    private var setupWindow: NSWindow?
     
     let modelContainer: ModelContainer
     
     override init() {
         do {
             modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self, IndexedFile.self, FileChunk.self)
-            
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
@@ -24,38 +24,71 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Hide from Dock
-        NSApp.setActivationPolicy(.accessory)
         
+        // 1. Initialize core components
         fileIndexer = FileIndexer(modelContainer: modelContainer)
-        
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               fileIndexer: fileIndexer!)
         
+        // --- THIS IS THE FIX ---
+        // We are *forcing* the app to skip setup by setting this to 'true'.
+        let hasCompletedSetup = true
+        // --- END OF FIX ---
+        
+        if !hasCompletedSetup {
+            // This part is now skipped
+            launchSetupWizard()
+        } else {
+            // This part will now *always* run
+            launchMenuBarApp()
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+    
+    /// This function shows the SetupView in its own window.
+    private func launchSetupWizard() {
+        NSApp.setActivationPolicy(.regular) // Show app in Dock
+        
+        let setupView = SetupView()
+            .modelContainer(modelContainer)
+            .environment(fileIndexer!)
+        
+        setupWindow = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 600, height: 650),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        setupWindow?.isReleasedWhenClosed = false
+        setupWindow?.center()
+        setupWindow?.contentView = NSHostingView(rootView: setupView)
+        setupWindow?.title = "Welcome to Omni"
+        
+        setupWindow?.titlebarAppearsTransparent = true
+        setupWindow?.standardWindowButton(.closeButton)?.isHidden = true
+        setupWindow?.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        setupWindow?.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        setupWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    
+    /// This is your original launch logic, now in its own function.
+    func launchMenuBarApp() {
         hotkeyManager = HotkeyManager(panelController: panelController)
-        
-        // Setup status bar
         setupStatusBar()
-        
-        // Register hotkey
         hotkeyManager?.registerHotkey()
         
-        // Show panel
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.panelController?.show()
-        }
+        // --- ADDED THIS LINE ---
+        // Let's show the panel on launch so you can see it
+        panelController?.show()
     }
     
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem?.button {
-            
-            // --- THIS IS THE CHANGE ---
-            // I've swapped the icon to "brain.head.profile"
-            button.image = NSImage(systemSymbolName: "brain",
+            button.image = NSImage(systemSymbolName: "brain.head.profile",
                                      accessibilityDescription: "Omni")
-            // --- END OF CHANGE ---
-            
             button.action = #selector(togglePanel)
             button.target = self
         }
@@ -63,5 +96,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func togglePanel() {
         panelController?.toggle()
+    }
+    
+    /// This function is called by the 'Finish Setup' button
+    func setupDidComplete() {
+        setupWindow?.close()
+        setupWindow = nil
+        launchMenuBarApp()
+        
+        panelController?.show()
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+    
+    // Prevents app from quitting when setup window is closed
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
+        return !hasCompletedSetup
     }
 }

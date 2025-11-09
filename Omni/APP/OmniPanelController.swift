@@ -8,29 +8,18 @@ class OmniPanelController: NSObject {
     private var panel: OmniPanel!
     private var hostingView: NSHostingView<AnyView>?
     
-    // --- REMOVED ---
-    // private var calendarService: CalendarService
-    // --- END REMOVED ---
-    
     private var fileIndexer: FileIndexer
     
-    // --- UPDATED INIT ---
-    // Init now only accepts the services we are keeping
     init(modelContainer: ModelContainer, fileIndexer: FileIndexer) {
-        self.fileIndexer = fileIndexer // Store it
+        self.fileIndexer = fileIndexer
         super.init()
 
-        // Create the ContentView
         let contentView = ContentView()
 
-        // Create the hosting view and inject the remaining services
         let hostingView = NSHostingView(
             rootView: AnyView(
                 contentView
                     .modelContainer(modelContainer)
-                    // --- REMOVED ---
-                    // .environment(calendarService)
-                    // --- END REMOVED ---
                     .environment(fileIndexer)
             )
         )
@@ -45,7 +34,10 @@ class OmniPanelController: NSObject {
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         
-        // We let the ChatView's .onAppear handle focus
+        // --- THIS IS THE FIX ---
+        // We REMOVE the .setActivationPolicy call from here.
+        // The AppDelegate will handle this.
+        // --- END OF FIX ---
     }
 
     func toggle() {

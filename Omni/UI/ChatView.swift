@@ -1,5 +1,5 @@
 import SwiftUI
-import UniformTypeIdentifiers
+import UniformTypeIdentifiers // This import provides UTType
 
 struct ChatView: View {
     @StateObject var viewModel: ContentViewModel
@@ -15,19 +15,21 @@ struct ChatView: View {
     var sortedMessages: [ChatMessage] {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
-    
-    // --- 1. THIS IS THE FIX for the "File Pill" Bug ---
-    // This logic determines if we should show the "file pills"
+
+    // --- 🛑 THIS IS THE FIX 🛑 ---
+    // This logic is being restored.
+    // It shows pills if files are attached,
+    // AND hides them after you send a message.
     private var shouldShowFilePills: Bool {
         let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
-        // Check if any message in the history *already* has sources
+        // Check if any message in the chat *already* has sources
         let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
         
         // Only show the pills if we have files attached AND
         // no messages have been sent with them yet.
         return hasAttachedFiles && !hasMessagesWithSources
     }
-    // --- END OF FIX ---
+    // --- 🛑 END OF FIX 🛑 ---
     
     var body: some View {
         ZStack {
@@ -60,6 +62,13 @@ struct ChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
                     }
+                    .contextMenu {
+                        Button(role: .destructive, action: {
+                            viewModel.clearChat()
+                        }) {
+                            Label("Clear Chat", systemImage: "trash")
+                        }
+                    }
                     .onChange(of: session.messages.count) { _, _ in
                         if let lastMessage = sortedMessages.last {
                             withAnimation(.easeOut(duration: 0.3)) {
@@ -74,9 +83,9 @@ struct ChatView: View {
                     }
                 }
                 
-                // --- 2. THIS IS THE FIX ---
-                // We now use our new helper variable to decide
-                // whether to show this view or not.
+                // --- 🛑 FILE PILLS RESTORED 🛑 ---
+                // This UI is now controlled by the 'shouldShowFilePills'
+                // logic, which is what you wanted.
                 if shouldShowFilePills {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -92,7 +101,7 @@ struct ChatView: View {
                     .background(Color(hex: "242424"))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                // --- END OF FIX ---
+                // --- 🛑 END OF RESTORED UI 🛑 ---
                 
                 // Input Area
                 VStack(spacing: 0) {
@@ -149,29 +158,48 @@ struct ChatView: View {
         .navigationTitle(session.title)
         .toolbar {
             ToolbarItemGroup(placement: .automatic) {
-                Button(action: { viewModel.clearChat() }) {
-                    Image(systemName: "trash")
+                Button(action: { viewModel.generateNotebook() }) {
+                    Image(systemName: viewModel.isGeneratingNotebook ? "hourglass" : "doc.text.fill")
                 }
-                .help("Clear chat")
-                
-                NavigationLink(destination: SettingsView()) {
-                    Image(systemName: "gear")
-                }
-                .help("Settings")
+                .help("Generate Notebook from Chat")
+                .disabled(viewModel.isGeneratingNotebook)
             }
         }
+        .sheet(isPresented: $viewModel.isShowingNotebook) {
+            NotebookView(
+                noteContent: $viewModel.notebookContent,
+                isShowing: $viewModel.isShowingNotebook
+            )
+        }
         .onDrop(of: [UTType.fileURL], isTargeted: $isDropTarget) { providers in
-            Task {
-                var urls: [URL] = []
-                for provider in providers {
-                    if let url = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) as? URL {
-                        urls.append(url)
+            
+            let group = DispatchGroup()
+            var collectedURLs: [URL] = []
+
+            for provider in providers {
+                group.enter()
+                
+                _ = provider.loadObject(ofClass: URL.self) { url, error in
+                    defer {
+                        group.leave()
+                    }
+                    
+                    if let url = url {
+                        if url.startAccessingSecurityScopedResource() {
+                            collectedURLs.append(url)
+                        }
+                    } else if let error = error {
+                        print("Failed to load dropped file: \(error.localizedDescription)")
                     }
                 }
-                if !urls.isEmpty {
-                    viewModel.addAttachedFiles(urls: urls)
+            }
+
+            group.notify(queue: .main) {
+                if !collectedURLs.isEmpty {
+                    viewModel.addAttachedFiles(urls: collectedURLs)
                 }
             }
+            
             return true
         }
         .onChange(of: viewModel.shouldFocusInput) { _, shouldFocus in
@@ -182,7 +210,8 @@ struct ChatView: View {
         }
     }
     
-    // ... (all helper functions are unchanged) ...
+    // ... (All helper functions remain unchanged) ...
+    
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
         let (title, icon) = titleAndIcon(for: action)
@@ -241,7 +270,16 @@ struct ChatView: View {
         if let window = NSApp.keyWindow {
             openPanel.beginSheetModal(for: window) { (result) in
                 if result == .OK {
-                    viewModel.addAttachedFiles(urls: openPanel.urls)
+                    var urlsToAttach: [URL] = []
+                    for url in openPanel.urls {
+                        if url.startAccessingSecurityScopedResource() {
+                            urlsToAttach.append(url)
+                        }
+                    }
+                    
+                    if !urlsToAttach.isEmpty {
+                         viewModel.addAttachedFiles(urls: urlsToAttach)
+                    }
                 }
             }
         }
