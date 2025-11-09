@@ -8,6 +8,9 @@ struct ChatView: View {
     
     @State private var isDropTarget = false
     
+    // --- 🛑 NEW STATE FOR ANIMATION 🛑 ---
+    @State private var isAnimatingDots = false
+    
     var session: ChatSession {
         viewModel.currentSession
     }
@@ -46,9 +49,38 @@ struct ChatView: View {
                                 .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
                             
+                            // --- 🛑 THIS IS THE FIX 🛑 ---
+                            // Replaced 'LoadingIndicatorView()' with the
+                            // 3-dot animation code directly.
                             if viewModel.isLoading {
-                                LoadingIndicatorView().transition(.scale.combined(with: .opacity))
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 6) {
+                                            ForEach(0..<3) { index in
+                                                Circle()
+                                                    .fill(Color(hex: "8A8A8A"))
+                                                    .frame(width: 6, height: 6)
+                                                    .scaleEffect(isAnimatingDots ? 1.0 : 0.5)
+                                                    .opacity(isAnimatingDots ? 1.0 : 0.5)
+                                                    .animation(
+                                                        Animation.easeInOut(duration: 0.6)
+                                                            .repeatForever()
+                                                            .delay(Double(index) * 0.2),
+                                                        value: isAnimatingDots
+                                                    )
+                                            }
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "242424")).overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "2F2F2F"), lineWidth: 1)))
+                                    }
+                                    Spacer(minLength: 100)
+                                }
+                                .onAppear { isAnimatingDots = true }
+                                .onDisappear { isAnimatingDots = false } // Added this for safety
+                                .transition(.scale.combined(with: .opacity))
                             }
+                            // --- 🛑 END OF FIX 🛑 ---
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
@@ -107,9 +139,7 @@ struct ChatView: View {
                                 .font(.system(size: 13))
                                 .foregroundColor(Color(hex: "666666"))
                             
-                            // --- 🛑 THIS IS THE FIX 🛑 ---
                             TextField("", text: $viewModel.inputText, prompt: Text("Ask a question or paste a URL...").foregroundColor(Color(hex: "666666")))
-                            // --- 🛑 END OF FIX 🛑 ---
                                 .textFieldStyle(.plain)
                                 .font(.system(size: 14))
                                 .foregroundColor(Color(hex: "EAEAEA"))
@@ -198,6 +228,8 @@ struct ChatView: View {
             viewModel.focusInput()
         }
     }
+    
+    // ... (All helper functions remain unchanged) ...
     
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
