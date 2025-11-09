@@ -16,20 +16,11 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
 
-    // --- 🛑 THIS IS THE FIX 🛑 ---
-    // This logic is being restored.
-    // It shows pills if files are attached,
-    // AND hides them after you send a message.
     private var shouldShowFilePills: Bool {
         let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
-        // Check if any message in the chat *already* has sources
         let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
-        
-        // Only show the pills if we have files attached AND
-        // no messages have been sent with them yet.
         return hasAttachedFiles && !hasMessagesWithSources
     }
-    // --- 🛑 END OF FIX 🛑 ---
     
     var body: some View {
         ZStack {
@@ -83,9 +74,6 @@ struct ChatView: View {
                     }
                 }
                 
-                // --- 🛑 FILE PILLS RESTORED 🛑 ---
-                // This UI is now controlled by the 'shouldShowFilePills'
-                // logic, which is what you wanted.
                 if shouldShowFilePills {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -101,7 +89,6 @@ struct ChatView: View {
                     .background(Color(hex: "242424"))
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                // --- 🛑 END OF RESTORED UI 🛑 ---
                 
                 // Input Area
                 VStack(spacing: 0) {
@@ -120,7 +107,9 @@ struct ChatView: View {
                                 .font(.system(size: 13))
                                 .foregroundColor(Color(hex: "666666"))
                             
-                            TextField("", text: $viewModel.inputText, prompt: Text("Ask about your files...").foregroundColor(Color(hex: "666666")))
+                            // --- 🛑 THIS IS THE FIX 🛑 ---
+                            TextField("", text: $viewModel.inputText, prompt: Text("Ask a question or paste a URL...").foregroundColor(Color(hex: "666666")))
+                            // --- 🛑 END OF FIX 🛑 ---
                                 .textFieldStyle(.plain)
                                 .font(.system(size: 14))
                                 .foregroundColor(Color(hex: "EAEAEA"))
@@ -209,8 +198,6 @@ struct ChatView: View {
             viewModel.focusInput()
         }
     }
-    
-    // ... (All helper functions remain unchanged) ...
     
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {

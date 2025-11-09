@@ -19,6 +19,9 @@ class ContentViewModel: ObservableObject {
     private var fileIndexer: FileIndexer
     private let searchService = FileSearchService()
     
+    // --- 🛑 NEW: WEB SCRAPER 🛑 ---
+    private let scraper = WebScraperService()
+    
     init(modelContext: ModelContext, session: ChatSession, fileIndexer: FileIndexer) {
         self.modelContext = modelContext
         self.currentSession = session
@@ -47,6 +50,9 @@ class ContentViewModel: ObservableObject {
             _ = await fileIndexer.indexFiles(at: newURLs)
             
             for url in newURLs {
+                // Only stop access for security-scoped URLs (file drops)
+                // Temp files (like from web) don't need this.
+                _ = url.startAccessingSecurityScopedResource()
                 url.stopAccessingSecurityScopedResource()
             }
             
@@ -64,13 +70,62 @@ class ContentViewModel: ObservableObject {
     }
 
     func sendMessage() {
-        guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
         
-        // --- 🛑 ONE-LINE FIX 🛑 ---
-        // Force the UI to update when the message is sent,
-        // which will re-evaluate 'shouldShowFilePills' and hide the pills.
-        objectWillChange.send()
-        // --- 🛑 END OF FIX 🛑 ---
+        // --- 🛑 NEW: URL CHECK 🛑 ---
+        // Check if the input is a valid URL
+        if let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased()) {
+            
+            // It's a URL, so we process it as a web source
+            isLoading = true
+            inputText = "" // Clear the input field
+            
+            Task {
+                // Add a placeholder message
+                let tempMessage = ChatMessage(content: "Reading from \(url.host ?? "web page")...", isUser: false, sources: nil)
+                await MainActor.run {
+                    currentSession.messages.append(tempMessage)
+                }
+                
+                guard let cleanText = await scraper.fetchAndCleanText(from: url) else {
+                    // Handle error
+                    await MainActor.run {
+                        tempMessage.content = "Sorry, I couldn't read the content from that URL."
+                        isLoading = false
+                    }
+                    return
+                }
+                
+                // Save the clean text to a temporary file
+                let fileName = (url.host ?? "web_source") + ".txt"
+                if let tempFileURL = saveTextAsTempFile(text: cleanText, fileName: fileName) {
+                    // Use our *existing* function to add this new temp file
+                    await MainActor.run {
+                        // Remove the placeholder
+                        currentSession.messages.removeAll(where: { $0.id == tempMessage.id })
+                        modelContext.delete(tempMessage)
+                        
+                        addAttachedFiles(urls: [tempFileURL])
+                        isLoading = false
+                        objectWillChange.send() // Force UI to update pills
+                    }
+                } else {
+                    await MainActor.run {
+                        tempMessage.content = "Sorry, I couldn't save the web content as a file."
+                        isLoading = false
+                    }
+                }
+            }
+            
+            // Stop here. Do not send this as a chat message.
+            return
+        }
+        // --- 🛑 END OF NEW URL CHECK 🛑 ---
+        
+        // If it's not a URL, continue with the normal send message logic
+        
+        objectWillChange.send() // This hides the file pills
         
         let userMessageText = inputText
         let sessionAttachments = currentSession.attachedFileURLs
@@ -222,6 +277,8 @@ class ContentViewModel: ObservableObject {
         }
     }
     
+    // --- 🛑 THIS IS THE FIX 🛑 ---
+    // The full function body has been restored.
     private func titleAndIcon(for action: String) -> (String, String) {
         switch action {
         case "DRAFT_EMAIL":
@@ -238,6 +295,25 @@ class ContentViewModel: ObservableObject {
             return ("Find trends in this data", "chart.line.uptrend.xyaxis")
         default:
             return (action.replacingOccurrences(of: "_", with: " ").capitalized, "sparkles")
+        }
+    }
+    // --- 🛑 END OF FIX 🛑 ---
+    
+    // --- 🛑 NEW HELPER FUNCTION 🛑 ---
+    /// Saves a string of text to a temporary .txt file and returns its URL.
+    private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
+        let tempDirectory = FileManager.default.temporaryDirectory
+        // Sanitize file name
+        let sanitizedName = fileName.replacingOccurrences(of: "[^a-zA-Z0-9.-]", with: "_", options: .regularExpression)
+        let fileURL = tempDirectory.appendingPathComponent("\(sanitizedName).txt")
+        
+        do {
+            try text.write(to: fileURL, atomically: true, encoding: .utf8)
+            // This temp file doesn't need security-scoped access
+            return fileURL
+        } catch {
+            print("Error saving temp file: \(error.localizedDescription)")
+            return nil
         }
     }
 }

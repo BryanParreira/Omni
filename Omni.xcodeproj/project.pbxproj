@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		30672FF12EC05A570030D82B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 30672FF02EC05A570030D82B /* SwiftSoup */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		3C2F6B112EB3EA0A001C2DD7 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -819,6 +823,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				30672FF12EC05A570030D82B /* SwiftSoup in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1662,6 +1667,7 @@
 			);
 			name = Omni;
 			packageProductDependencies = (
+				30672FF02EC05A570030D82B /* SwiftSoup */,
 			);
 			productName = Omni;
 			productReference = 3C2F6B022EB3EA09001C2DD7 /* Omni.app */;
@@ -1740,6 +1746,7 @@
 			mainGroup = 3C2F6AF92EB3EA09001C2DD7;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
+				30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3C2F6B032EB3EA09001C2DD7 /* Products */;
@@ -2123,6 +2130,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.11.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		30672FF02EC05A570030D82B /* SwiftSoup */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */;
+			productName = SwiftSoup;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 3C2F6AFA2EB3EA09001C2DD7 /* Project object */;
 }

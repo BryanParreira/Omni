@@ -40,11 +40,22 @@ actor IndexerActor {
         var overviewData: [URL: [String]] = [:]
         
         for url in urls {
-            guard url.startAccessingSecurityScopedResource() else {
-                print("Failed to get security access for file: \(url.lastPathComponent)")
-                continue
+            
+            // --- 🛑 THIS IS THE FIX 🛑 ---
+            // We check if the file is in our app's temp directory.
+            let isTempFile = url.path.starts(with: FileManager.default.temporaryDirectory.path)
+            
+            // If it's NOT a temp file (i.e., a user-dropped file),
+            // we must perform the security check.
+            if !isTempFile {
+                guard url.startAccessingSecurityScopedResource() else {
+                    print("Failed to get security access for file: \(url.lastPathComponent)")
+                    continue
+                }
+                defer { url.stopAccessingSecurityScopedResource() }
             }
-            defer { url.stopAccessingSecurityScopedResource() }
+            // If it *is* a temp file, we skip this check and just continue.
+            // --- 🛑 END OF FIX 🛑 ---
             
             print("Starting to index: \(url.lastPathComponent)")
             
