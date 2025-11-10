@@ -1,634 +1,215 @@
 <div align="center">
 
-```
-╔═══════════════════════════════════════════════════════════════════════╗
-║                                                                       ║
-║        ▄▄▄▄▄▄▄▄▄▄▄  ▄▄       ▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄            ║
-║       ▐░░░░░░░░░░░▌▐░░▌     ▐░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌           ║
-║       ▐░█▀▀▀▀▀▀▀█░▌▐░▌░▌   ▐░▐░▌▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀            ║
-║       ▐░▌       ▐░▌▐░▌▐░▌ ▐░▌▐░▌▐░▌▐░▌    ▐░▌     ▐░▌                ║
-║       ▐░▌       ▐░▌▐░▌ ▐░▐░▌ ▐░▌▐░▌ ▐░▌   ▐░▌     ▐░▌                ║
-║       ▐░▌       ▐░▌▐░▌  ▐░▌  ▐░▌▐░▌  ▐░▌  ▐░▌     ▐░▌                ║
-║       ▐░▌       ▐░▌▐░▌   ▀   ▐░▌▐░▌   ▐░▌ ▐░▌     ▐░▌                ║
-║       ▐░▌       ▐░▌▐░▌       ▐░▌▐░▌    ▐░▌▐░▌     ▐░▌                ║
-║       ▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌     ▐░▐░▌ ▄▄▄▄█░█▄▄▄▄            ║
-║       ▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░▌      ▐░░▌▐░░░░░░░░░░░▌           ║
-║        ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀        ▀▀  ▀▀▀▀▀▀▀▀▀▀▀            ║
-║                                                                       ║
-║              THE CONTEXT-AWARE DESKTOP AI ASSISTANT                   ║
-║                 Your Personal Intelligence Layer                      ║
-║                                                                       ║
-╚═══════════════════════════════════════════════════════════════════════╝
-```
+ ▄▄▄▄▄▄▄▄▄▄▄  ▄▄       ▄▄  ▄▄        ▄  ▄▄▄▄▄▄▄▄▄▄▄
+▐░░░░░░░░░░░▌▐░░▌     ▐░░▌▐░░▌      ▐░▌▐░░░░░░░░░░░▌
+▐░█▀▀▀▀▀▀▀█░▌▐░▌░▌   ▐░▐░▌▐░▌░▌     ▐░▌ ▀▀▀▀█░█▀▀▀▀
+▐░▌       ▐░▌▐░▌▐░▌ ▐░▌▐░▌▐░▌▐░▌    ▐░▌     ▐░▌
+▐░▌       ▐░▌▐░▌ ▐░▐░▌ ▐░▌▐░▌ ▐░▌   ▐░▌     ▐░▌
+▐░▌       ▐░▌▐░▌  ▐░▌  ▐░▌▐░▌  ▐░▌  ▐░▌     ▐░▌
+▐░▌       ▐░▌▐░▌   ▀   ▐░▌▐░▌   ▐░▌ ▐░▌     ▐░▌
+▐░▌       ▐░▌▐░▌       ▐░▌▐░▌    ▐░▌▐░▌     ▐░▌
+▐░█▄▄▄▄▄▄▄█░▌▐░▌       ▐░▌▐░▌     ▐░▐░▌ ▄▄▄▄█░█▄▄▄▄
+▐░░░░░░░░░░░▌▐░▌       ▐░▌▐░▌      ▐░░▌▐░░░░░░░░░░░▌
+ ▀▀▀▀▀▀▀▀▀▀▀  ▀         ▀  ▀        ▀▀  ▀▀▀▀▀▀▀▀▀▀▀
+The Context-Aware Desktop AI Assistant for your Mac
 
-[![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000000?style=for-the-badge&logo=apple&logoColor=white)](https://www.apple.com/macos)
-[![Swift 5.9](https://img.shields.io/badge/Swift-5.9-FA7343?style=for-the-badge&logo=swift&logoColor=white)](https://swift.org)
-[![MIT License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-**[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Contributing](#contributing) • [License](#license)**
+Features • Installation • Usage • Privacy • Contributing
 
 </div>
 
----
+What is Omni?
+Omni is a context-aware AI assistant that runs on your Mac. It connects to your local files, documents, and web pages to provide instant, intelligent answers, all while prioritizing your privacy.
 
-## Overview
+Summon Omni from anywhere with a global hotkey, drag-and-drop files to instantly add context, or paste a URL to chat with a web page. Choose between cloud models like GPT-4o or run 100% offline with local models like Llama 3 for complete privacy.
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                                                                    │
-│  Omni transforms your Mac into a proactive productivity hub by     │
-│  seamlessly integrating AI assistance with your local files and    │
-│  calendar. Built with privacy at its core, Omni enables instant    │
-│  information retrieval and intelligent action suggestions—all      │
-│  while keeping your data secure.                                   │
-│                                                                    │
-└────────────────────────────────────────────────────────────────────┘
-```
+✨ Features
+🧠 Hybrid LLM Backend: Switch seamlessly between cloud providers (OpenAI, Anthropic, Google Gemini) or run models entirely locally with deep Ollama integration (Llama 3, Mistral, etc.).
 
-<table>
-<tr>
-<td width="50%">
+📂 Drag & Drop Analysis: Drop files (PDFs, .txt, .md, code files) directly into the app to add them to the chat's context.
 
-**Perfect for:**
+🌐 Web Source Integration: Paste any URL into the chat bar to fetch, clean, and add the website's content as a source.
 
-- Developers needing quick code explanations
-- Professionals managing multiple workflows  
-- Privacy-conscious users wanting local AI
-- Anyone seeking instant, context-aware answers
+⌨️ Global Hotkey: Summon Omni from any application with a simple Option + Space shortcut.
 
-</td>
-<td width="50%">
+📝 AI-Generated Notebooks: Turn any chat history into a clean, structured note with a single click. Save your key insights as a .md or .txt file.
 
-**Key Capabilities:**
+⚡ AI-Suggested Actions: Get dynamic, contextual button prompts based on your conversation, like "Draft an email" or "Explain this code."
 
-- Hybrid LLM backend (cloud + local)
-- Calendar integration & meeting prep
-- Global hotkey access from anywhere
-- Privacy-first architecture
+🔒 Privacy-First: Your files are indexed locally and never uploaded. When using local models, the entire process is 100% offline.
 
-</td>
-</tr>
-</table>
+🚀 How it Works
+Omni uses a Retrieval-Augmented Generation (RAG) pipeline to provide context-aware answers.
 
----
+Index: When you add a file or web page, FileIndexer reads the content, splits it into small chunks, and stores them in a local SwiftData database.
 
-## Features
+Retrieve: When you ask a question, FileSearchService finds the most relevant chunks of text from the database.
 
-<div align="center">
+Generate: The user's question and the retrieved text chunks are sent to the AI (either local or cloud) as context. The AI then generates an answer based only on that information.
 
-```
-╔═════════════════════════════════════════════════════════════════════╗
-║                        CORE INTELLIGENCE                            ║
-╠═════════════════════════════════════════════════════════════════════╣
-║                                                                     ║
-║  HYBRID LLM BACKEND                                                 ║
-║  Choose between major cloud providers (OpenAI, Anthropic, Google    ║
-║  Gemini) or run models entirely locally with deep Ollama            ║
-║  integration (Llama 3, Mistral, CodeLlama, and more)                ║
-║                                                                     ║
-║  ─────────────────────────────────────────────────────────────────  ║
-║                                                                     ║
-║  AI-SUGGESTED ACTIONS                                               ║
-║  Dynamic, contextual actions based on file type:                    ║
-║  • "Explain this code" for Swift/Python files                       ║
-║  • "Summarize document" for PDFs                                    ║
-║  • "Draft an email" for general tasks                               ║
-║                                                                     ║
-║  ─────────────────────────────────────────────────────────────────  ║
-║                                                                     ║
-║  GENERAL KNOWLEDGE MODE                                             ║
-║  Functions as a flexible assistant even without attached files      ║
-║                                                                     ║
-╚═════════════════════════════════════════════════════════════════════╝
-```
+🖥️ Installation & Setup
+For Users (Recommended)
+Go to the Latest Release page.
 
-```
-╔═════════════════════════════════════════════════════════════════════╗
-║                    WORKFLOW & PRODUCTIVITY                          ║
-╠═════════════════════════════════════════════════════════════════════╣
-║                                                                     ║
-║  [MEETING PREPARATION]     [GLOBAL HOTKEY]      [DRAG & DROP]       ║
-║                                                                     ║
-║  Native macOS Calendar      Summon instantly    Instant file        ║
-║  integration displays       with ⌥ + Space      analysis for        ║
-║  upcoming events with       from anywhere       PDFs, code, and     ║
-║  Google, Exchange &         on your Mac         text documents      ║
-║  iCloud support                                                     ║
-║                                                                     ║
-╚═════════════════════════════════════════════════════════════════════╝
-```
+Download the Omni.v1.0.0.dmg file.
 
-</div>
+Open the .dmg and drag Omni.app into your Applications folder.
 
----
+For Developers (Build from Source)
+Clone the repository:
 
-## Installation
+Bash
 
-### System Requirements
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Operating System:  macOS 14 (Sonoma) or newer         │
-│  Development:       Xcode 15+ (for building)           │
-│  Storage:           ~100MB + space for local models    │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Quick Start
-
-<table>
-<tr><td width="100">
-
-**STEP 1**
-
-</td><td>
-
-**Launch Omni**
-
-The app runs silently in your menu bar after launch
-
-</td></tr>
-<tr><td>
-
-**STEP 2**
-
-</td><td>
-
-**Summon the Interface**
-
-Press `⌥ + Space` anywhere on your Mac
-
-</td></tr>
-<tr><td>
-
-**STEP 3**
-
-</td><td>
-
-**Start Chatting**
-
-Type any question, request, or drag-and-drop files directly into the input field
-
-</td></tr>
-</table>
-
-### Setting Up Local LLMs
-
-<details>
-<summary><strong>Click to expand local setup instructions</strong></summary>
-
-<br>
-
-For maximum privacy and offline capability, configure Ollama:
-
-```
-╔══════════════════════════════════════════════════════════════════════╗
-║  STEP 1: INSTALL OLLAMA                                              ║
-╠══════════════════════════════════════════════════════════════════════╣
-║                                                                      ║
-║  # Visit ollama.com to download, or use Homebrew:                   ║
-║  brew install ollama                                                 ║
-║                                                                      ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  STEP 2: PULL A MODEL                                                ║
-╠══════════════════════════════════════════════════════════════════════╣
-║                                                                      ║
-║  # Download Llama 3 (recommended for general use)                   ║
-║  ollama pull llama3                                                  ║
-║                                                                      ║
-║  # Or try other models:                                              ║
-║  ollama pull mistral        # Fast and efficient                     ║
-║  ollama pull codellama      # Optimized for code                     ║
-║  ollama pull phi3           # Lightweight option                     ║
-║                                                                      ║
-╠══════════════════════════════════════════════════════════════════════╣
-║  STEP 3: CONFIGURE OMNI                                              ║
-╠══════════════════════════════════════════════════════════════════════╣
-║                                                                      ║
-║  1. Open Settings (gear icon in the app)                            ║
-║  2. Navigate to the AI tab                                           ║
-║  3. Select your installed model from "Local LLM" dropdown            ║
-║                                                                      ║
-╚══════════════════════════════════════════════════════════════════════╝
-```
-
-**Note:** Local models run entirely on your Mac—no internet required, complete privacy guaranteed.
-
-</details>
-
----
-
-## Building from Source
-
-<details>
-<summary><strong>Developer setup and configuration</strong></summary>
-
-<br>
-
-### Prerequisites
-
-```bash
-# Clone the repository
 git clone https://github.com/yourusername/omni.git
 cd omni
+Install the SwiftSoup package dependency (File > Add Packages...).
 
-# Open in Xcode
-open Omni.xcodeproj
-```
+Open Omni.xcodeproj in Xcode 15 or newer.
 
-### Required Entitlements
+Select your development team in "Signing & Capabilities."
 
-Your `.entitlements` file must include:
+Press ⌘ + R to build and run.
 
-```xml
+<details> <summary><strong>Required Entitlements for Building</strong></summary>
+
+Your .entitlements file must include:
+
+XML
+
 <key>com.apple.security.app-sandbox</key>
-<true/>
-<key>com.apple.security.personal-information.calendars</key>
-<true/>
-<key>com.apple.security.personal-information.speech-recognition</key>
 <true/>
 <key>com.apple.security.network.client</key>
 <true/>
-```
+<key>com.apple.security.files.user-selected.read-only</key>
+<true/>
+<key>com.apple.security.files.bookmarks.app-scope</key>
+<true/>
+</details>
 
-### Xcode Configuration
+Usage
+1. Quick Start
+Launch Omni (it will run in your menu bar).
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│  Signing & Capabilities → App Sandbox                        │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ✓  Calendars              (App Data)                        │
-│  ✓  Outgoing Connections   (Network - Required for APIs)    │
-│  ✓  Speech Recognition     (Hardware)                        │
-│                                                              │
-└──────────────────────────────────────────────────────────────┘
-```
+Press ⌥ + Space to show the chat window.
 
-### Build & Run
+Drag a file, paste a URL, or just start asking questions!
 
-1. Select your development team in Signing & Capabilities
-2. Choose target device: macOS
-3. Press `⌘ + R` to build and run
+2. Setting Up Your AI
+You can configure your AI provider in Settings (⚙️) > AI.
+
+Cloud Providers (OpenAI, Anthropic, etc.)
+Select your provider (e.g., "OpenAI").
+
+Paste your API key into the text field.
+
+Click "Test Connection" to verify your key.
+
+Choose your preferred model (e.g., gpt-4o-mini).
+
+Local Models (Ollama)
+For 100% private, offline use:
+
+<details> <summary><strong>Click to expand Ollama setup instructions</strong></summary>
+
+Install & Run Ollama:
+
+Bash
+
+# Visit ollama.com to download, or use Homebrew:
+brew install ollama
+
+# Run the Ollama server
+ollama serve
+Pull a Model:
+
+Bash
+
+# We recommend Llama 3.1
+ollama pull llama3.1
+
+# Or other great models:
+ollama pull mistral  # Fast and efficient
+ollama pull codellama # Optimized for code
+Configure Omni:
+
+In Omni's settings, go to the "AI" tab.
+
+Select "Local LLM" as your provider.
+
+Choose your installed model from the dropdown menu.
 
 </details>
 
----
+🔒 Privacy & Security
+Your privacy is the core principle of this app.
 
-## Privacy & Security
+Local-First Processing: When using Ollama, all AI processing and file indexing happens entirely on your Mac. No data ever leaves your device.
 
-<div align="center">
+Sandboxed Execution: Omni runs in the secure macOS App Sandbox with minimal permissions. It only accesses what you explicitly give it.
 
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║                                                                   ║
-║                    PRIVACY-FIRST ARCHITECTURE                     ║
-║                                                                   ║
-╠═══════════════════════════════════════════════════════════════════╣
-║                                                                   ║
-║  LOCAL-FIRST PROCESSING                                           ║
-║  When using Ollama, all AI processing happens entirely on         ║
-║  your Mac. No data leaves your device.                            ║
-║                                                                   ║
-║  ───────────────────────────────────────────────────────────────  ║
-║                                                                   ║
-║  ZERO DATA RETENTION                                              ║
-║  File content is read only during active conversations and        ║
-║  never retained afterward. We don't collect, transmit, or         ║
-║  store your files on external servers.                            ║
-║                                                                   ║
-║  ───────────────────────────────────────────────────────────────  ║
-║                                                                   ║
-║  SANDBOXED EXECUTION                                              ║
-║  Runs in macOS App Sandbox with minimal permissions. Only         ║
-║  accesses what you explicitly authorize.                          ║
-║                                                                   ║
-║  ───────────────────────────────────────────────────────────────  ║
-║                                                                   ║
-║  TRANSPARENT & AUDITABLE                                          ║
-║  Open source codebase means you can audit exactly what            ║
-║  Omni does with your data.                                        ║
-║                                                                   ║
-║  ───────────────────────────────────────────────────────────────  ║
-║                                                                   ║
-║  YOU CONTROL EVERYTHING                                           ║
-║  Choose between cloud providers or fully local models based       ║
-║  on your privacy needs and use case.                              ║
-║                                                                   ║
-╚═══════════════════════════════════════════════════════════════════╝
-```
+No Data Retention: File content is never copied. The app only creates a local index of your text. When you clear a chat, all associated sources are de-referenced.
 
-</div>
+Transparent & Open-Source: The full codebase is available for you to audit exactly what Omni does with your data.
 
-> **Note:** When using cloud providers (OpenAI, Anthropic, Google), data is processed according to their respective privacy policies. Local mode ensures complete privacy.
+Note: When using cloud providers (OpenAI, Anthropic, Google), your prompts and context are sent to their servers and are subject to their privacy policies. For 100% privacy, use Local Mode.
 
----
+🗺️ Roadmap
+Q1 2026:
 
-## Usage
+[ ] 🧠 Global Source Library: Add a "global memory" for the AI (style guides, personal bios)
 
-### Example Workflows
+[ ] 🔔 Proactive File Watcher: Automatically index files from watched folders (e.g., Downloads).
 
-<table>
-<tr>
-<td width="50%">
+[ ] 📌 Pinned Insights: Add the ability to "pin" key messages to your Notebook.
 
-**ASK GENERAL QUESTIONS**
+Q2 2026:
 
-```
-"What's the weather like today 
-in San Francisco?"
+[ ] 🎙️ Voice Input: Add support for dictation and voice commands.
 
-"Explain quantum computing in 
-simple terms"
+[ ] 🚀 System-Wide Actions: Use your HotkeyManager to grab selected text from any app.
 
-"Help me write a professional 
-email"
-```
+[ ] 🔗 Shortcuts Integration: Connect Omni to the Apple Shortcuts app for automation.
 
-</td>
-<td width="50%">
+👋 Contributing
+Contributions are welcome! Whether it's reporting a bug, suggesting a feature, or submitting code, your help is appreciated.
 
-**ANALYZE CODE**
+<table> <tr> <td width="33%" align="center">
 
-```
-[Drag .swift file]
+Report Bugs
 
-"Explain what this code does"
 
-"Find potential bugs in this 
-function"
+Check existing issues, then open a new one with reproduction steps.
 
-"Suggest performance 
-improvements"
-```
+</td> <td width="33%" align="center">
 
-</td>
-</tr>
-<tr>
-<td>
+Suggest Features
 
-**WORK WITH DOCUMENTS**
 
-```
-[Drag PDF]
+Open an issue with the 'enhancement' label and describe your use case.
 
-"Summarize this document"
+</td> <td width="33%" align="center">
 
-"Extract key takeaways from 
-this report"
+Submit Code
 
-"Create an action item list"
-```
 
-</td>
-<td>
+Fork, create a feature branch, and open a Pull Request.
 
-**MEETING PREPARATION**
+</td> </tr> </table>
 
-```
-[View upcoming meetings in 
-sidebar]
+<details> <summary><strong>Areas we'd love help with</strong></summary>
 
-"What's on my calendar today?"
+Supporting more file types (.docx, .pptx, etc.)
 
-"Prepare talking points for my 
-3pm meeting"
-```
+New AI-suggested actions
 
-</td>
-</tr>
-</table>
+UI/UX polish and animations
 
----
+Performance optimizations for indexing
 
-## Contributing
+Documentation and user tutorials
 
-<div align="center">
-
-```
-┌───────────────────────────────────────────────────────────────────┐
-│                                                                   │
-│           WE WELCOME CONTRIBUTIONS FROM THE COMMUNITY             │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-</div>
-
-### How to Contribute
-
-<table>
-<tr>
-<td width="33%" align="center">
-
-**REPORT BUGS**
-
-Check existing issues first, then provide clear reproduction steps with macOS and Omni versions
-
-</td>
-<td width="33%" align="center">
-
-**SUGGEST FEATURES**
-
-Open an issue with the 'enhancement' label and describe the use case
-
-</td>
-<td width="33%" align="center">
-
-**SUBMIT CODE**
-
-Fork, create a feature branch, commit, and open a Pull Request
-
-</td>
-</tr>
-</table>
-
-### Pull Request Process
-
-```bash
-# 1. Fork the repository
-
-# 2. Create your feature branch
-git checkout -b feature/amazing-feature
-
-# 3. Commit your changes
-git commit -m 'Add amazing feature'
-
-# 4. Push to the branch
-git push origin feature/amazing-feature
-
-# 5. Open a Pull Request on GitHub
-```
-
-<details>
-<summary><strong>Areas we'd love help with</strong></summary>
-
-<br>
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  • Supporting additional file types (Excel, Word, etc.)     │
-│  • New suggested actions for different workflows            │
-│  • UI/UX improvements and polish                            │
-│  • Performance optimizations                                │
-│  • Documentation, tutorials, and examples                   │
-│  • Localization and internationalization                    │
-│  • Test coverage improvements                               │
-└─────────────────────────────────────────────────────────────┘
-```
+Localization into other languages
 
 </details>
 
----
-
-## Roadmap
-
-<div align="center">
-
-```
-╔═════════════════════════════════════════════════════════════════════╗
-║                         DEVELOPMENT ROADMAP                         ║
-╠═════════════════════════════════════════════════════════════════════╣
-║                                                                     ║
-║  Q1 2025  │  IN PROGRESS                                            ║
-║           │  • Multi-file conversation context                      ║
-║           │  • Custom action templates                              ║
-║           │  • Enhanced code analysis                               ║
-║                                                                     ║
-║  ─────────────────────────────────────────────────────────────────  ║
-║                                                                     ║
-║  Q2 2025  │  PLANNED                                                ║
-║           │  • Integration with Apple Shortcuts                     ║
-║           │  • Voice input and output                               ║
-║           │  • Improved calendar intelligence                       ║
-║                                                                     ║
-║  ─────────────────────────────────────────────────────────────────  ║
-║                                                                     ║
-║  Q3 2025  │  PROPOSED                                               ║
-║           │  • Team knowledge bases                                 ║
-║           │  • Plugin system for third-party integrations           ║
-║           │  • Advanced automation workflows                        ║
-║                                                                     ║
-╚═════════════════════════════════════════════════════════════════════╝
-```
-
-</div>
-
----
-
-## License
-
-<div align="center">
-
-```
-╔═══════════════════════════════════════════════════════════════════╗
-║                                                                   ║
-║                         MIT LICENSE                               ║
-║                                                                   ║
-║  Free to use, modify, and distribute                              ║
-║  Commercial use allowed                                           ║
-║  Attribution appreciated                                          ║
-║                                                                   ║
-║  See LICENSE file for complete terms                              ║
-║                                                                   ║
-╚═══════════════════════════════════════════════════════════════════╝
-```
-
-</div>
-
----
-
-## Acknowledgments
-
-<table>
-<tr>
-<td align="center" width="25%">
-
-**Ollama**
-
-Making local LLMs accessible and practical
-
-</td>
-<td align="center" width="25%">
-
-**OpenAI**
-
-GPT model integration and API
-
-</td>
-<td align="center" width="25%">
-
-**Anthropic**
-
-Claude model support
-
-</td>
-<td align="center" width="25%">
-
-**Google**
-
-Gemini integration
-
-</td>
-</tr>
-</table>
-
-<div align="center">
-
-Special thanks to the open-source community for inspiration, tools, and continuous support.
-
-</div>
-
----
-
-## Contact & Support
-
-<div align="center">
-
-<table>
-<tr>
-<td align="center" width="33%">
-
-**REPORT ISSUES**
-
-[GitHub Issues](https://github.com/yourusername/omni/issues)
-
-</td>
-<td align="center" width="33%">
-
-**DISCUSSIONS**
-
-[GitHub Discussions](https://github.com/yourusername/omni/discussions)
-
-</td>
-<td align="center" width="33%">
-
-**EMAIL**
-
-support@omniapp.dev
-
-</td>
-</tr>
-</table>
-
-</div>
-
----
-
-<div align="center">
-
-```
-╔════════════════════════════════════════════════════════════════╗
-║                                                                ║
-║            MADE WITH CARE FOR THE MAC COMMUNITY                ║
-║                                                                ║
-║         Built with Swift • Powered by AI • Secured by macOS    ║
-║                                                                ║
-╚════════════════════════════════════════════════════════════════╝
-```
-
-**If you find Omni useful, consider giving it a star on GitHub**
-
-[⬆ Back to Top](#)
-
-</div>
+⚖️ License
+This project is licensed under the MIT License. See the LICENSE file for complete terms.
