@@ -14,6 +14,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     let modelContainer: ModelContainer
     
+    // --- 🛑 NEW: Add the @AppStorage property here 🛑 ---
+    // This reads the *actual* value from UserDefaults.
+    @AppStorage("hasCompletedSetup") var hasCompletedSetup: Bool = false
+    
     override init() {
         do {
             modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self, IndexedFile.self, FileChunk.self)
@@ -30,19 +34,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               fileIndexer: fileIndexer!)
         
-        // --- THIS IS THE FIX ---
-        // We are *forcing* the app to skip setup by setting this to 'true'.
-        let hasCompletedSetup = true
-        // --- END OF FIX ---
-        
+        // --- 🛑 THIS IS THE FIX 🛑 ---
+        // We now check the *real* 'hasCompletedSetup' variable
+        // instead of forcing it to 'false'.
         if !hasCompletedSetup {
-            // This part is now skipped
+            // This will run if setup is NOT complete
             launchSetupWizard()
         } else {
-            // This part will now *always* run
+            // This will run if setup IS complete
             launchMenuBarApp()
             NSApp.setActivationPolicy(.accessory)
         }
+        // --- 🛑 END OF FIX 🛑 ---
     }
     
     /// This function shows the SetupView in its own window.
@@ -54,7 +57,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(fileIndexer!)
         
         setupWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 650),
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 750), // Use new size
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -79,9 +82,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusBar()
         hotkeyManager?.registerHotkey()
         
-        // --- ADDED THIS LINE ---
-        // Let's show the panel on launch so you can see it
-        panelController?.show()
+        // --- REMOVED this line ---
+        // We don't need to show the panel on every single launch
+        // panelController?.show()
     }
     
     private func setupStatusBar() {
@@ -113,6 +116,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // Prevents app from quitting when setup window is closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        // We use the *real* value here
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
         return !hasCompletedSetup
     }
