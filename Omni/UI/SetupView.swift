@@ -53,38 +53,39 @@ private struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
-// Visual card for feature highlights (used on page 2)
-private struct FeatureCard: View {
+// Visual row for feature highlights (used on page 2)
+private struct FeatureHighlightRow: View {
     let icon: String // SF Symbol name
     let title: String
     let description: String
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 15) {
+        HStack(spacing: 20) {
             Image(systemName: icon)
-                .font(.system(size: 32, weight: .light))
+                .font(.system(size: 24, weight: .medium))
                 .symbolRenderingMode(.palette)
                 .foregroundStyle(brandGradient, Color(hex: "EAEAEA").opacity(0.8))
-                .frame(width: 50, height: 50)
-                .background(Color(hex: "1A1A1A"))
+                .frame(width: 45, height: 45)
+                .background(Color(hex: "2F2F2F"))
                 .cornerRadius(10)
             
-            Text(title)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text(description)
-                .font(.body)
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text(description)
+                    .font(.body)
+                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 15)
                 .fill(Color(hex: "242424"))
-                .shadow(color: .black.opacity(0.3), radius: 10, x: 0, y: 5)
         )
     }
 }
@@ -173,6 +174,7 @@ struct SetupView: View {
     @State private var isGrantingAccess = false
     @State private var showingSettingsAlert = false
     
+    // State for the AI page
     @State private var cloudProvider: String = "openai"
     @State private var currentApiKey: String = ""
     
@@ -269,16 +271,21 @@ struct SetupView: View {
             
             Spacer()
             
+            // --- 🛑 THIS IS THE FIX 🛑 ---
+            // The logic for disabling the button was incorrect.
+            let isNextDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
+            
             if currentPage < 4 {
-                let isDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
                 Button(action: {
                     handleNext()
                 }) {
                     Label("Next", systemImage: "chevron.right")
                 }
-                .buttonStyle(PrimaryButtonStyle(isDisabled: isDisabled))
-                .disabled(isDisabled)
+                .buttonStyle(PrimaryButtonStyle(isDisabled: isNextDisabled))
+                .disabled(isNextDisabled)
             } else {
+                // The "Finish Setup" button should never be disabled
+                // unless we add a final check (e.g., for permissions).
                 Button(action: {
                     completeSetup()
                 }) {
@@ -286,6 +293,7 @@ struct SetupView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
+            // --- 🛑 END OF FIX 🛑 ---
         }
         .padding(20)
         .background(Color(hex: "242424"))
@@ -323,7 +331,7 @@ struct SetupView: View {
     private var featuresPage: some View {
         ScrollView {
             VStack(alignment: .center, spacing: 30) {
-                Text("Unlock Powerful Capabilities")
+                Text("Unlock Your Context")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
@@ -333,32 +341,43 @@ struct SetupView: View {
                     .foregroundColor(Color(hex: "AAAAAA"))
                     .padding(.bottom, 10)
 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                    FeatureCard(
+                VStack(spacing: 20) {
+                    FeatureHighlightRow(
                         icon: "doc.text.magnifyingglass",
                         title: "Chat With Your Files",
                         description: "Drop in PDFs, code, or text files to ask questions and get instant summaries."
                     )
                     
-                    FeatureCard(
+                    FeatureHighlightRow(
+                        icon: "photo.fill",
+                        title: "Read Text From Images (OCR)",
+                        description: "Drop in screenshots or photos, and Omni will read the text from them."
+                    )
+                    
+                    FeatureHighlightRow(
                         icon: "globe.americas.fill",
                         title: "Analyze Web Pages",
                         description: "Paste any URL into the chat bar to add live web content as a source."
                     )
                     
-                    FeatureCard(
-                        icon: "keyboard.option",
-                        title: "Global Hotkey Access",
-                        description: "Summon Omni instantly from any app with a quick press of ⌥ + Space."
+                    FeatureHighlightRow(
+                        icon: "brain",
+                        title: "Global Source Library",
+                        description: "Give Omni a 'long-term memory' of your most important files, available in any chat."
                     )
                     
-                    FeatureCard(
+                    FeatureHighlightRow(
+                        icon: "doc.text.fill",
+                        title: "Generate Notebooks",
+                        description: "Turn any chat conversation into a clean, structured note to save your key insights."
+                    )
+                    
+                    FeatureHighlightRow(
                         icon: "cpu.fill",
                         title: "100% Private Local AI",
                         description: "Connect to Ollama to run models on your Mac. Your files and chats never leave your device."
                     )
                 }
-                .frame(maxWidth: 800)
             }
             .padding(40)
         }
@@ -497,18 +516,20 @@ struct SetupView: View {
         .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
     
+    // --- 🛑 REDESIGNED: "Wow" Permissions Page 🛑 ---
     private var permissionsPage: some View {
-        VStack(alignment: .leading, spacing: 30) {
+        VStack(alignment: .leading, spacing: 20) {
             Text("Grant Full Disk Access")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
-            Text("Omni needs this critical permission to **find and index** all your files, documents, and code across your Mac.")
+            Text("Omni needs this to find and read your files. Your files and their content **never** leave your Mac.")
                 .font(.title3)
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.bottom, 10)
             
+            // --- Visual Guide ---
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top) {
                     Image(systemName: "lock.shield.fill")
@@ -518,7 +539,7 @@ struct SetupView: View {
                         Text("Your Privacy is Paramount")
                             .font(.headline)
                             .foregroundColor(.white)
-                        Text("Omni is a **local-first** app. Full Disk Access is only for reading your files locally. **Your data and its content never leave your Mac.**")
+                        Text("Omni is a **local-first** app. This permission is only for reading your files locally. Your data never leaves your device.")
                             .font(.subheadline)
                             .foregroundColor(Color(hex: "AAAAAA"))
                             .fixedSize(horizontal: false, vertical: true)
@@ -526,53 +547,134 @@ struct SetupView: View {
                 }
                 
                 Divider().background(Color(hex: "3A3A3A"))
+
+                Text("How to Grant Access")
+                    .font(.headline)
+                    .foregroundColor(.white)
                 
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("Follow these steps:")
-                        .font(.headline)
-                        .foregroundColor(.white)
+                // Animated Mock UI
+                HStack(spacing: 20) {
+                    // Step 1: Button
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("STEP 1")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                        Button(action: {
+                            isGrantingAccess = true
+                            openFullDiskAccessSettings()
+                            showingSettingsAlert = true
+                        }) {
+                            Label(isGrantingAccess ? "Opening..." : "Open Settings", systemImage: "gearshape.fill")
+                        }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .disabled(isGrantingAccess)
+                    }
                     
-                    HStack(alignment: .top) {
-                        Text("1.")
-                            .fontWeight(.bold)
-                            .foregroundStyle(brandGradient) // Corrected
-                        Text("Click the button below to open your Mac's **System Settings** directly to the 'Full Disk Access' section.")
-                    }
-                    HStack(alignment: .top) {
-                        Text("2.")
-                            .fontWeight(.bold)
-                            .foregroundStyle(brandGradient) // Corrected
-                        Text("Click the **'+'** button (you might need to unlock with your password), then navigate to your **Applications** folder and add **Omni**.")
-                    }
-                    HStack(alignment: .top) {
-                        Text("3.")
-                            .fontWeight(.bold)
-                            .foregroundStyle(brandGradient) // Corrected
-                        Text("Crucially, make sure the **toggle switch for Omni is turned ON** in the list.")
+                    Image(systemName: "arrow.right")
+                        .font(.title)
+                        .foregroundColor(Color(hex: "4A4A4A"))
+                    
+                    // Step 2 & 3: Visual Demo
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("STEP 2 & 3")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                        
+                        // Animated mock UI
+                        MockSettingsToggleView()
                     }
                 }
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "AAAAAA"))
+                
             }
             .padding(25)
             .background(Color(hex: "242424"))
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
             
-            Button(action: {
-                isGrantingAccess = true
-                openFullDiskAccessSettings()
-                showingSettingsAlert = true
-            }) {
-                Label(isGrantingAccess ? "Opening System Settings..." : "Open Privacy & Security Settings", systemImage: "gearshape.fill")
-            }
-            .buttonStyle(PrimaryButtonStyle())
-            .frame(maxWidth: .infinity)
-            .disabled(isGrantingAccess)
-            
             Spacer()
         }
         .padding(40)
+    }
+    
+    // --- 🛑 NEW: Mock UI for Permissions Page 🛑 ---
+    private struct MockSettingsToggleView: View {
+        @State private var isAnimating = false
+        @State private var showPlus = true
+        @State private var showOmni = false
+        @State private var isToggled = false
+        
+        var body: some View {
+            VStack(alignment: .leading, spacing: 8) {
+                // Mock app list
+                HStack {
+                    Image(systemName: "app.dash")
+                        .font(.title2)
+                    Text("Other App")
+                    Spacer()
+                    Toggle("", isOn: .constant(true)).labelsHidden()
+                }
+                .foregroundColor(Color(hex: "AAAAAA"))
+                .padding(8)
+                
+                // Animated Omni row
+                if showOmni {
+                    HStack {
+                        Image(systemName: "brain.head.profile")
+                            .font(.title2)
+                            .foregroundStyle(brandGradient)
+                        Text("Omni")
+                            .fontWeight(.semibold)
+                        Spacer()
+                        Toggle("", isOn: $isToggled).labelsHidden()
+                    }
+                    .padding(8)
+                    .background(Color.blue.opacity(0.3))
+                    .cornerRadius(6)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+                
+                // Animated Plus button
+                if showPlus {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(Color(hex: "8A8A8A"))
+                        .scaleEffect(isAnimating ? 1.2 : 1.0)
+                        .opacity(isAnimating ? 1.0 : 0.7)
+                }
+            }
+            .padding(12)
+            .frame(width: 250, height: 140, alignment: .topLeading)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "1A1A1A")))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "4A4A4A")))
+            .onAppear {
+                startAnimation()
+            }
+        }
+        
+        func startAnimation() {
+            // Reset
+            isAnimating = false
+            showPlus = true
+            showOmni = false
+            isToggled = false
+            
+            // Sequence
+            withAnimation(.easeInOut(duration: 0.5).delay(1.0)) {
+                isAnimating = true // Plus button pulses
+            }
+            withAnimation(.easeInOut(duration: 0.5).delay(1.5)) {
+                isAnimating = false
+                showPlus = false
+                showOmni = true // Omni app appears
+            }
+            withAnimation(.easeInOut(duration: 0.5).delay(2.5)) {
+                isToggled = true // Toggle turns on
+            }
+            // Loop
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+                startAnimation()
+            }
+        }
     }
     
     // MARK: - Helper Functions
@@ -633,8 +735,11 @@ struct SetupView: View {
     }
     
     private func completeSetup() {
+        // This was the fix: We must call handleNext() to save the
+        // AI settings if the user is on page 3 and clicks "Finish"
+        // (though they can't). This handles the page 4 click.
         if currentPage == 4 {
-             handleNext() // Just in case, save any state
+             handleNext() // This will increment page to 5, but that's ok
         }
         
         hasCompletedSetup = true

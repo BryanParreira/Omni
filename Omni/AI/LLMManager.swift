@@ -20,12 +20,11 @@ class LLMManager {
         return .local
     }
     
+    // MARK: - System Prompts
+    
     private let generalSystemPrompt = """
     You are a helpful general-purpose AI assistant named Omni.
     Answer the user's question clearly and concisely.
-    You can optionally suggest one follow-up action.
-    The tag format is [ACTION: ACTION_NAME].
-    Example: [ACTION: DRAFT_EMAIL]
     """
     
     private let overviewSystemPrompt = """
@@ -44,7 +43,6 @@ class LLMManager {
     3. [Suggested Question 3]
     """
 
-    // --- 🛑 NEW NOTEBOOK PROMPT 🛑 ---
     private let notebookSystemPrompt = """
     You are a professional research assistant. Your task is to synthesize a chat discussion into a clean, structured notebook entry.
     The user will provide the full chat history.
@@ -56,9 +54,11 @@ class LLMManager {
 
     Respond ONLY with the Markdown-formatted note. Do not add any conversational text.
     """
-    // --- 🛑 END OF NEW PROMPT 🛑 ---
-
-    func generateResponse(chatHistory: [ChatMessage], context: String, files: [URL]) async throws -> (content: String, action: String?) {
+    
+    // MARK: - Public API
+    
+    /// Generates a standard chat response, now returning a simple String.
+    func generateResponse(chatHistory: [ChatMessage], context: String, files: [URL]) async throws -> String {
         
         let responseText: String
         var messages: [OpenAIMessage] = []
@@ -90,7 +90,7 @@ class LLMManager {
             )
         }
         
-        return self.parseResponseForAction(responseText)
+        return responseText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     /// Generates a summary overview for a new file.
@@ -110,20 +110,16 @@ class LLMManager {
             responseText = try await LocalLLMRunner.shared.generateResponse(messages: messages)
         }
         
-        // The overview response doesn't have an "action"
         return responseText
     }
     
-    // --- 🛑 NEW NOTEBOOK FUNCTION 🛑 ---
+    /// Generates a full notebook summary from a chat history.
     func generateNotebook(chatHistory: [ChatMessage], files: [URL]) async throws -> String {
         
         var messages: [OpenAIMessage] = []
         
-        // 1. Add the new system prompt
         messages.append(OpenAIMessage(role: "system", content: notebookSystemPrompt))
         
-        // 2. Add the full chat history (excluding the first welcome message)
-        // We'll format it slightly to make it clearer to the AI
         var fullHistory = "Here is the chat history to summarize:\n\n"
         for message in chatHistory {
             if message.content.contains("Hi! I'm Omni") && chatHistory.count == 1 {
@@ -134,7 +130,6 @@ class LLMManager {
         }
         messages.append(OpenAIMessage(role: "user", content: fullHistory))
 
-        // 3. Generate the response
         let responseText: String
         switch currentMode {
         case .openAI:
@@ -147,36 +142,15 @@ class LLMManager {
             )
         }
         
-        // 4. Return the raw text
         return responseText
     }
-    // --- 🛑 END OF NEW FUNCTION 🛑 ---
+    
+    // MARK: - Private Helpers
     
     private func generateSmartPrompt(for files: [URL]) -> String {
-        var fileTypes = Set<String>()
-        for file in files {
-            fileTypes.insert(file.pathExtension.lowercased())
-        }
+        // This function is now much simpler.
+        // It no longer needs to generate an 'actionsPrompt'.
         
-        var actionsPrompt = """
-        ACTIONS:
-        Your response MUST end with a single action tag.
-        The tag format is [ACTION: ACTION_NAME].
-        """
-        
-        if fileTypes.contains("pdf") || fileTypes.contains("txt") || fileTypes.contains("md") {
-            actionsPrompt += "\n- For this document, suggest 'SUMMARIZE_DOCUMENT'."
-            actionsPrompt += "\n- If the user asks for a summary, suggest 'DRAFT_EMAIL'."
-        }
-        if fileTypes.contains("swift") || fileTypes.contains("py") || fileTypes.contains("js") {
-            actionsPrompt += "\n- For this code file, suggest 'EXPLAIN_CODE' or 'FIND_BUGS'."
-        }
-        if fileTypes.contains("csv") {
-            actionsPrompt += "\n- For this CSV file, suggest 'ANALYZE_DATA' or 'FIND_TRENDS'."
-        }
-        actionsPrompt += "\n- For a generic request, you can suggest 'DRAFT_EMAIL'."
-        actionsPrompt += "\n- Example ending: [ACTION: EXPLAIN_CODE]"
-
         return """
         You are a File System Analyst AI assistant.
         
@@ -184,37 +158,10 @@ class LLMManager {
         1. Answer questions ONLY based on the file content provided in the context.
         2. ALWAYS cite the source file name (e.g., "According to 'Resume.pdf'...").
         3. If the context has no relevant information, say so clearly.
-
-        \(actionsPrompt)
+        4. **SYNTHESIS:** If you combine information from *more than one file* to form an answer, you MUST state this.
+           Example: "By combining information from 'Report-A.pdf' and 'Sales-Data.csv', I can see that..."
         """
     }
     
-    private func parseResponseForAction(_ text: String) -> (content: String, action: String?) {
-        let pattern = #"(?:\s*\[(?:ACTION: )?([A-Z_]+)\]\s*)$"#
-        
-        guard let regex = try? NSRegularExpression(pattern: pattern) else {
-            return (content: text, action: nil)
-        }
-        
-        let range = NSRange(text.startIndex..<text.endIndex, in: text)
-        
-        if let match = regex.firstMatch(in: text, options: [], range: range) {
-            
-            let fullTagRange = match.range(at: 0)
-            let actionNameRange = match.range(at: 1)
-
-            if let fullTagSwiftRange = Range(fullTagRange, in: text),
-               let actionNameSwiftRange = Range(actionNameRange, in: text) {
-                
-                let cleanContent = String(text[..<fullTagSwiftRange.lowerBound])
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                
-                let cleanAction = String(text[actionNameSwiftRange])
-                
-                return (content: cleanContent, action: cleanAction)
-            }
-        }
-        
-        return (content: text.trimmingCharacters(in: .whitespacesAndNewlines), action: nil)
-    }
+    // --- 🛑 REMOVED 'parseResponseForAction' function 🛑 ---
 }

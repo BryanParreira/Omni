@@ -1,6 +1,5 @@
 import Foundation
 import AppKit
-// import ScreenCaptureKit // <-- REMOVED
 
 /// This helper struct manages and requests system-level permissions.
 struct PermissionsHelper {
@@ -12,6 +11,7 @@ struct PermissionsHelper {
      - Returns: `true` if permission is granted, `false` otherwise.
      */
     static func isAccessibilityGranted() -> Bool {
+        // This is the "no-prompt" way to check the status.
         let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
         let options: [CFString: Any] = [promptKey: false]
         return AXIsProcessTrustedWithOptions(options as CFDictionary)
@@ -22,6 +22,7 @@ struct PermissionsHelper {
      trigger the system prompt for the user.
      */
     static func checkAndRequestAccessibility() {
+        // This is the "prompt" way to check.
         let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
         let options: [CFString: Any] = [promptKey: true]
         let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
@@ -40,12 +41,10 @@ struct PermissionsHelper {
         alert.addButton(withTitle: "OK")
         
         if alert.runModal() == .alertFirstButtonReturn {
+            // This URL opens the exact correct settings pane
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
                 NSWorkspace.shared.open(url)
             }
         }
     }
-    
-    // --- SCREEN CAPTURE (New section) ---
-    // --- 🛑 REMOVED unused Screen Capture section 🛑 ---
 }

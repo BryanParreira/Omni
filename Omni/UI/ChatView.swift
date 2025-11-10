@@ -26,6 +26,8 @@ struct ChatView: View {
         return hasAttachedFiles && !hasMessagesWithSources
     }
     
+    // MARK: - Body
+    
     var body: some View {
         ZStack {
             LinearGradient(
@@ -34,7 +36,7 @@ struct ChatView: View {
             ).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Chat Area
+                // MARK: Chat Area
                 ScrollViewReader { proxy in
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 16) {
@@ -43,9 +45,7 @@ struct ChatView: View {
                                     MessageBubbleView(message: message)
                                         .id(message.id)
                                     
-                                    if !message.isUser, let action = message.suggestedAction {
-                                        suggestedActionButton(action: action, message: message)
-                                    }
+                                    // AI Suggested Action button logic has been removed
                                 }
                                 .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
@@ -104,6 +104,7 @@ struct ChatView: View {
                     }
                 }
                 
+                // MARK: File Pills
                 if shouldShowFilePills {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -120,7 +121,7 @@ struct ChatView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
-                // Input Area
+                // MARK: Input Area
                 VStack(spacing: 0) {
                     Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
                     HStack(spacing: 12) {
@@ -131,6 +132,25 @@ struct ChatView: View {
                         }
                         .buttonStyle(.plain)
                         .help("Attach files")
+                        
+                        // --- 🛑 "GLOWING" BRAIN BUTTON (Restored) 🛑 ---
+                        Button(action: {
+                            viewModel.useGlobalLibrary.toggle()
+                        }) {
+                            Image(systemName: "brain")
+                                .font(.system(size: 18)) // Slightly smaller than 'plus' for balance
+                                .foregroundColor(viewModel.useGlobalLibrary ? Color(hex: "FF6B6B") : Color(hex: "666666"))
+                                // The "Glow" Effect
+                                .shadow(
+                                    color: viewModel.useGlobalLibrary ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
+                                    radius: viewModel.useGlobalLibrary ? 6 : 0,
+                                    x: 0, y: 0
+                                )
+                                .animation(.easeInOut(duration: 0.2), value: viewModel.useGlobalLibrary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(viewModel.useGlobalLibrary ? "Stop using Global Library" : "Include Global Library in context")
+                        // --- 🛑 END OF BUTTON 🛑 ---
                         
                         HStack(spacing: 8) {
                             Image(systemName: "text.cursor")
@@ -230,25 +250,6 @@ struct ChatView: View {
     // MARK: - View Builders
     
     @ViewBuilder
-    private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
-        let (title, icon) = titleAndIcon(for: action)
-        
-        Button(action: {
-            viewModel.performAction(action: action, on: message)
-        }) {
-            Label(title, systemImage: icon)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(Color(hex: "EAEAEA"))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 12)
-                .background(Color(hex: "2A2A2A"))
-                .cornerRadius(8)
-        }
-        .buttonStyle(.plain)
-        .padding(.leading, 40)
-    }
-    
-    @ViewBuilder
     private func dropOverlay() -> some View {
         ZStack {
             Color.black.opacity(0.6)
@@ -274,36 +275,6 @@ struct ChatView: View {
     }
     
     // MARK: - Helper Functions
-    
-    private func titleAndIcon(for action: String) -> (String, String) {
-        let title: String
-        let icon: String
-        
-        switch action {
-        case "DRAFT_EMAIL":
-            title = "Draft an email with this summary"
-            icon = "square.and.pencil"
-        case "SUMMARIZE_DOCUMENT":
-            title = "Copy this summary"
-            icon = "doc.on.doc"
-        case "EXPLAIN_CODE":
-            title = "Explain this code"
-            icon = "doc.text.magnifyingglass"
-        case "FIND_BUGS":
-            title = "Find potential bugs in this code"
-            icon = "ant"
-        case "ANALYZE_DATA":
-            title = "Analyze this data"
-            icon = "chart.bar"
-        case "FIND_TRENDS":
-            title = "Find trends in this data"
-            icon = "chart.line.uptrend.xyaxis"
-        default:
-            title = action.replacingOccurrences(of: "_", with: " ").capitalized
-            icon = "sparkles"
-        }
-        return (title, icon)
-    }
     
     func presentFilePicker() {
         let openPanel = NSOpenPanel()

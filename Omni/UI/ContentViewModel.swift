@@ -18,6 +18,8 @@ class ContentViewModel: ObservableObject {
     @Published var notebookContent: String = ""
     @Published var isGeneratingNotebook: Bool = false
     
+    @Published var useGlobalLibrary: Bool = false
+    
     private var fileIndexer: FileIndexer
     private let searchService = FileSearchService()
     private let scraper = WebScraperService()
@@ -54,7 +56,6 @@ class ContentViewModel: ObservableObject {
             _ = await fileIndexer.indexFiles(at: newURLs)
             
             for url in newURLs {
-                // Only stop access for security-scoped URLs (file drops)
                 _ = url.startAccessingSecurityScopedResource()
                 url.stopAccessingSecurityScopedResource()
             }
@@ -83,14 +84,12 @@ class ContentViewModel: ObservableObject {
             inputText = "" // Clear the input field
             
             Task {
-                // Add a placeholder message
                 let tempMessage = ChatMessage(content: "Reading from \(url.host ?? "web page")...", isUser: false, sources: nil)
                 await MainActor.run {
                     currentSession.messages.append(tempMessage)
                 }
                 
                 guard let cleanText = await scraper.fetchAndCleanText(from: url) else {
-                    // Handle error
                     await MainActor.run {
                         tempMessage.content = "Sorry, I couldn't read the content from that URL."
                         isLoading = false
@@ -98,12 +97,9 @@ class ContentViewModel: ObservableObject {
                     return
                 }
                 
-                // Save the clean text to a temporary file
                 let fileName = (url.host ?? "web_source") + ".txt"
                 if let tempFileURL = saveTextAsTempFile(text: cleanText, fileName: fileName) {
-                    // Use our *existing* function to add this new temp file
                     await MainActor.run {
-                        // Remove the placeholder
                         currentSession.messages.removeAll(where: { $0.id == tempMessage.id })
                         modelContext.delete(tempMessage)
                         
@@ -118,7 +114,7 @@ class ContentViewModel: ObservableObject {
                     }
                 }
             }
-            return // Stop here. Do not send this as a chat message.
+            return // Stop here
         }
         
         // --- 2. Standard Message Logic ---
@@ -126,10 +122,24 @@ class ContentViewModel: ObservableObject {
         objectWillChange.send() // This hides the file pills
         
         let userMessageText = inputText
-        let sessionAttachments = currentSession.attachedFileURLs
+        
+        var allSourceURLs = currentSession.attachedFileURLs
+        var globalURLs: [URL] = []
+        
+        if useGlobalLibrary {
+            let descriptor = FetchDescriptor<GlobalSourceFile>()
+            if let globalFiles = try? modelContext.fetch(descriptor) {
+                globalURLs = globalFiles.compactMap { $0.getURL() }
+                for url in globalURLs {
+                    _ = url.startAccessingSecurityScopedResource()
+                }
+                allSourceURLs.append(contentsOf: globalURLs)
+            }
+        }
+
         
         inputText = ""
-        let sourceFilePaths = sessionAttachments.map { $0.path }
+        let sourceFilePaths = allSourceURLs.map { $0.path }
         
         let userMessage = ChatMessage(
             content: userMessageText,
@@ -147,15 +157,14 @@ class ContentViewModel: ObservableObject {
         
         Task {
             var botMessage: ChatMessage
-            let botSourceFilePaths = sessionAttachments.map { $0.path }
             
             do {
                 var context = ""
                 
-                if !sessionAttachments.isEmpty {
+                if !allSourceURLs.isEmpty {
                     let chunks = await searchService.searchChunks(
                         query: userMessageText,
-                        in: sessionAttachments,
+                        in: allSourceURLs,
                         modelContext: modelContext
                     )
                     
@@ -170,17 +179,18 @@ class ContentViewModel: ObservableObject {
                 
                 let chatHistory = Array(currentSession.messages)
                 
+                // --- 🛑 MODIFIED: 'aiResponse' is now just a String 🛑 ---
                 let aiResponse = try await LLMManager.shared.generateResponse(
                     chatHistory: chatHistory,
                     context: context,
-                    files: sessionAttachments
+                    files: allSourceURLs
                 )
                 
+                // --- 🛑 MODIFIED: 'suggestedAction' is removed 🛑 ---
                 botMessage = ChatMessage(
-                    content: aiResponse.content,
+                    content: aiResponse,
                     isUser: false,
-                    sources: botSourceFilePaths.isEmpty ? nil : botSourceFilePaths,
-                    suggestedAction: aiResponse.action
+                    sources: sourceFilePaths.isEmpty ? nil : sourceFilePaths
                 )
                 
             } catch {
@@ -190,6 +200,10 @@ class ContentViewModel: ObservableObject {
                     isUser: false,
                     sources: nil
                 )
+            }
+            
+            for url in globalURLs {
+                url.stopAccessingSecurityScopedResource()
             }
             
             await MainActor.run {
@@ -247,54 +261,11 @@ class ContentViewModel: ObservableObject {
         }
     }
     
-    func performAction(action: String, on message: ChatMessage) {
-        switch action {
-        case "DRAFT_EMAIL":
-            let summary = message.content
-            let subject = "Summary"
-            guard let encodedBody = summary.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                  let mailtoURL = URL(string: "mailto:?subject=\(subject)&body=\(encodedBody)")
-            else {
-                print("Error creating mailto link")
-                return
-            }
-            NSWorkspace.shared.open(mailtoURL)
-            
-        case "SUMMARIZE_DOCUMENT":
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(message.content, forType: .string)
-            
-        case "EXPLAIN_CODE", "FIND_BUGS", "ANALYZE_DATA", "FIND_TRENDS":
-            let (title, _) = titleAndIcon(for: action)
-            self.inputText = title
-            self.focusInput()
-            
-        default:
-            print("Unknown action: \(action)")
-        }
-    }
+    // --- 🛑 REMOVED 'performAction' function 🛑 ---
     
     // MARK: - Private Helpers
     
-    private func titleAndIcon(for action: String) -> (String, String) {
-        switch action {
-        case "DRAFT_EMAIL":
-            return ("Draft an email with this summary", "square.and.pencil")
-        case "SUMMARIZE_DOCUMENT":
-            return ("Copy this summary", "doc.on.doc")
-        case "EXPLAIN_CODE":
-            return ("Explain this code", "doc.text.magnifyingglass")
-        case "FIND_BUGS":
-            return ("Find potential bugs in this code", "ant")
-        case "ANALYZE_DATA":
-            return ("Analyze this data", "chart.bar")
-        case "FIND_TRENDS":
-            return ("Find trends in this data", "chart.line.uptrend.xyaxis")
-        default:
-            return (action.replacingOccurrences(of: "_", with: " ").capitalized, "sparkles")
-        }
-    }
+    // --- 🛑 REMOVED 'titleAndIcon' function 🛑 ---
     
     /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {

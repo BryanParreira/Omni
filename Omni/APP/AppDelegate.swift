@@ -14,12 +14,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     let modelContainer: ModelContainer
     
-    // This reads the *actual* value from UserDefaults.
     @AppStorage("hasCompletedSetup") var hasCompletedSetup: Bool = false
     
     override init() {
         do {
-            modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self, IndexedFile.self, FileChunk.self)
+            modelContainer = try ModelContainer(for: ChatSession.self, ChatMessage.self, IndexedFile.self, FileChunk.self, GlobalSourceFile.self)
         } catch {
             fatalError("Could not initialize ModelContainer: \(error)")
         }
@@ -33,7 +32,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               fileIndexer: fileIndexer!)
         
-        // 2. Check the *real* setup status
+        // --- 🛑 DEBUG: FORCING SETUP VIEW 🛑 ---
+        // We are temporarily skipping the 'hasCompletedSetup' check
+        // to always show the setup window during development.
+        
+        launchSetupWizard()
+
+        /*
+        // --- This is the PRODUCTION code to restore later ---
         if !hasCompletedSetup {
             // This will run if setup is NOT complete
             launchSetupWizard()
@@ -42,6 +48,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             launchMenuBarApp()
             NSApp.setActivationPolicy(.accessory)
         }
+        */
+        // --- 🛑 END OF DEBUG CHANGE 🛑 ---
     }
     
     /// This function shows the SetupView in its own window.
@@ -77,8 +85,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager = HotkeyManager(panelController: panelController)
         setupStatusBar()
         hotkeyManager?.registerHotkey()
-        
-        // panelController?.show() // Removed: Don't show panel on launch
     }
     
     private func setupStatusBar() {
@@ -110,7 +116,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     // Prevents app from quitting when setup window is closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        // We use the *real* value here
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
         return !hasCompletedSetup
     }

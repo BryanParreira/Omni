@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import SwiftData // 1. Import SwiftData
 
 // ===============================================
 // HELPER VIEWS (Unchanged)
@@ -74,12 +75,14 @@ private func settingsCard<Content: View>(
 }
 
 // ===============================================
-// MAIN SETTINGS VIEW (Redesigned with Picker)
+// MAIN SETTINGS VIEW (Updated)
 // ===============================================
 
+// --- 🛑 1. Re-add "Library" to the tabs 🛑 ---
 private enum SettingsTab: String, CaseIterable {
     case general = "General"
     case ai = "AI"
+    case library = "Library"
     case about = "About"
 }
 
@@ -102,7 +105,6 @@ struct SettingsView: View {
     var body: some View {
         VStack(spacing: 0) {
             
-            // --- Picker to replace the TabView bar ---
             Picker("Settings", selection: $currentTab) {
                 ForEach(SettingsTab.allCases, id: \.self) { tab in
                     Text(tab.rawValue).tag(tab)
@@ -115,7 +117,6 @@ struct SettingsView: View {
             
             Divider().background(Color(hex: "2F2F2F"))
 
-            // --- Content area that switches based on state ---
             VStack {
                 switch currentTab {
                 case .general:
@@ -130,6 +131,9 @@ struct SettingsView: View {
                         showAPIKey: $showAPIKey,
                         showSuccessMessage: $showSuccessMessage
                     )
+                // --- 🛑 2. Re-add the case for the Library view 🛑 ---
+                case .library:
+                    LibrarySettingsView()
                 case .about:
                     AboutView()
                 }
@@ -138,13 +142,13 @@ struct SettingsView: View {
             .background(Color(hex: "1A1A1A"))
         }
         .background(Color(hex: "1A1A1A"))
-        .accentColor(Color(hex: "FF6B6B")) // Tints the selected picker segment
+        .accentColor(Color(hex: "FF6B6B"))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done") {
                     dismiss()
                 }
-                .accentColor(Color(hex: "FF6B6B")) // Style the Done button
+                .accentColor(Color(hex: "FF6B6B"))
             }
         }
         .navigationTitle("Settings")
@@ -525,9 +529,199 @@ struct AISettingsView: View {
     }
     
     private func testAPIKey() {
-        // ... (function is unchanged) ...
+        Task {
+            await MainActor.run {
+                isTestingConnection = true
+                testErrorMessage = nil
+                showSuccessMessage = false
+            }
+            
+            do {
+                let url: URL
+                let authHeader: String
+                
+                switch selectedProvider {
+                case "openai":
+                    url = URL(string: "https://api.openai.com/v1/models")!
+                    authHeader = "Bearer \(openAIKey)"
+                case "anthropic":
+                    url = URL(string: "https://api.anthropic.com/v1/messages")!
+                    authHeader = anthropicKey
+                case "gemini":
+                    url = URL(string: "https://generativelanguage.googleapis.com/v1/models?key=\(geminiKey)")!
+                    authHeader = ""
+                default: return
+                }
+                
+                var request = URLRequest(url: url)
+                if !authHeader.isEmpty {
+                    if selectedProvider == "openai" {
+                        request.setValue(authHeader, forHTTPHeaderField: "Authorization")
+                    } else if selectedProvider == "anthropic" {
+                        request.setValue(authHeader, forHTTPHeaderField: "x-api-key")
+                        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+                    }
+                }
+                
+                let (_, response) = try await URLSession.shared.data(for: request)
+                
+                if let httpResponse = response as? HTTPURLResponse,
+                   (200...299).contains(httpResponse.statusCode) {
+                    await MainActor.run {
+                        withAnimation {
+                            showSuccessMessage = true
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        withAnimation {
+                            testErrorMessage = "Invalid API Key or server error."
+                        }
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    withAnimation {
+                        testErrorMessage = "Connection failed. (Check network)"
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                isTestingConnection = false
+            }
+        }
     }
 }
+
+// MARK: - 4. NEW: Library Settings View
+
+struct LibrarySettingsView: View {
+    @Environment(\.modelContext) private var modelContext
+    
+    // 1. Fetch all GlobalSourceFile objects
+    @Query(sort: \GlobalSourceFile.dateAdded, order: .reverse)
+    private var globalFiles: [GlobalSourceFile]
+    
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                
+                settingsCard(
+                    title: "Global Source Library",
+                    description: "Add files to your Global Library to make them available in *any* chat. This is perfect for your personal bio, style guides, API documentation, or other files you reference often.",
+                    content: {
+                        StyledButton(
+                            title: "Add File(s) to Library",
+                            systemImage: "plus",
+                            action: addFilesToLibrary
+                        )
+                    }
+                )
+                
+                // 2. List of currently added files
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Current Library Files")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                    
+                    if globalFiles.isEmpty {
+                        Text("Your library is empty. Add files to get started.")
+                            .font(.body)
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                    } else {
+                        // 3. List with a ForEach and a delete action
+                        List {
+                            ForEach(globalFiles) { file in
+                                HStack {
+                                    Image(systemName: "doc.text.fill")
+                                        .foregroundStyle(brandGradient)
+                                    Text(file.fileName)
+                                        .font(.body)
+                                        .foregroundColor(Color(hex: "EAEAEA"))
+                                    Spacer()
+                                }
+                                .padding(.vertical, 4)
+                                // --- 🛑 FIX: Added Context Menu 🛑 ---
+                                // This allows right-click to delete
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        deleteFile(file)
+                                    } label: {
+                                        Label("Remove from Library", systemImage: "trash")
+                                    }
+                                }
+                            }
+                            // This allows deleting with the Backspace key
+                            .onDelete(perform: deleteFiles)
+                        }
+                        .listStyle(.plain)
+                        .background(Color.clear)
+                        .frame(height: 200) // Give the list a fixed height
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(hex: "2F2F2F"), lineWidth: 1)
+                        )
+                    }
+                }
+                
+            }
+            .padding(20)
+        }
+        .background(Color(hex: "1A1A1A"))
+    }
+    
+    // 4. Function to add files to the SwiftData model
+    private func addFilesToLibrary() {
+        let openPanel = NSOpenPanel()
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = true
+        
+        if openPanel.runModal() == .OK {
+            for url in openPanel.urls {
+                do {
+                    // Create a secure bookmark
+                    let bookmarkData = try url.bookmarkData(
+                        options: .withSecurityScope,
+                        includingResourceValuesForKeys: nil,
+                        relativeTo: nil
+                    )
+                    
+                    // Create and insert the new model
+                    let newFile = GlobalSourceFile(
+                        bookmarkData: bookmarkData,
+                        fileName: url.lastPathComponent
+                    )
+                    modelContext.insert(newFile)
+                    
+                } catch {
+                    print("Error creating bookmark for \(url.lastPathComponent): \(error.localizedDescription)")
+                }
+            }
+            
+            try? modelContext.save()
+        }
+    }
+    
+    // 5. Function to delete files from IndexSet (Backspace key)
+    private func deleteFiles(at offsets: IndexSet) {
+        for index in offsets {
+            let file = globalFiles[index]
+            modelContext.delete(file)
+        }
+        try? modelContext.save()
+    }
+    
+    // 6. Function to delete a single file (Right-click)
+    private func deleteFile(_ file: GlobalSourceFile) {
+        modelContext.delete(file)
+        try? modelContext.save()
+    }
+}
+
 
 // MARK: - About Tab
 
@@ -595,5 +789,3 @@ struct AboutView: View {
         .background(Color(hex: "1A1A1A"))
     }
 }
-
-// --- 🛑 REMOVED: Debug 'AboutView' with 'hasCompletedSetup' 🛑 ---
