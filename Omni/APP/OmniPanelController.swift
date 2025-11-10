@@ -33,11 +33,6 @@ class OmniPanelController: NSObject {
         panel.center()
         panel.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        
-        // --- THIS IS THE FIX ---
-        // We REMOVE the .setActivationPolicy call from here.
-        // The AppDelegate will handle this.
-        // --- END OF FIX ---
     }
 
     func toggle() {

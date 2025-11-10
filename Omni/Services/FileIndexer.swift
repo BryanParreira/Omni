@@ -13,40 +13,31 @@ class FileIndexer {
         self.modelContainer = modelContainer
     }
     
-    // The function now returns a dictionary: [File URL: [First 5 Chunks]]
+    /// Indexes files at the given URLs on a background thread.
+    /// - Parameter urls: The array of file URLs to index.
+    /// - Returns: A dictionary mapping each file URL to its first 5 text chunks, for overview generation.
     func indexFiles(at urls: [URL]) async -> [URL: [String]] {
-        
-        // --- 1. THIS IS THE FIX ---
-        // We create a ModelActor, which is the *only*
-        // 100% safe way to use SwiftData on a background thread.
+        // Use a ModelActor for 100% safe background thread database work.
         let indexerActor = IndexerActor(modelContainer: self.modelContainer)
-        
-        // We now call the actor to do the background work.
         let overviewData = await indexerActor.indexFiles(at: urls)
         return overviewData
-        // --- END OF FIX ---
     }
 }
 
-// --- 2. NEW ACTOR ---
-// This new 'actor' lives in the *same file* (FileIndexer.swift).
-// Its only job is to safely handle background database work.
 @ModelActor
 actor IndexerActor {
     
-    // This function will run safely on a background thread
+    /// This function runs safely on a background thread via the ModelActor.
     func indexFiles(at urls: [URL]) async -> [URL: [String]] {
         
         var overviewData: [URL: [String]] = [:]
         
         for url in urls {
             
-            // --- 🛑 THIS IS THE FIX 🛑 ---
-            // We check if the file is in our app's temp directory.
+            // Check if the file is in our app's temp directory (e.g., a web scrape)
             let isTempFile = url.path.starts(with: FileManager.default.temporaryDirectory.path)
             
-            // If it's NOT a temp file (i.e., a user-dropped file),
-            // we must perform the security check.
+            // If it's NOT a temp file, we must perform the security check.
             if !isTempFile {
                 guard url.startAccessingSecurityScopedResource() else {
                     print("Failed to get security access for file: \(url.lastPathComponent)")
@@ -54,10 +45,6 @@ actor IndexerActor {
                 }
                 defer { url.stopAccessingSecurityScopedResource() }
             }
-            // If it *is* a temp file, we skip this check and just continue.
-            // --- 🛑 END OF FIX 🛑 ---
-            
-            print("Starting to index: \(url.lastPathComponent)")
             
             guard let content = self.readFileContent(at: url) else {
                 print("Unsupported file type or failed to read: \(url.lastPathComponent)")
@@ -70,19 +57,18 @@ actor IndexerActor {
                 continue
             }
             
+            // Store the first 5 chunks to return for the summary
             let overviewChunks = Array(chunks.prefix(5))
             overviewData[url] = overviewChunks
             
-            // We use the actor's *own* safe context
+            // Save the file and all its chunks to the database
             await self.save(chunks: chunks, for: url, context: self.modelContext)
-            
-            print("Successfully indexed \(chunks.count) chunks for \(url.lastPathComponent)")
         }
         
         return overviewData
     }
 
-    // --- All helper functions are now part of the actor ---
+    // MARK: - File Reading
     
     private func readFileContent(at url: URL) -> String? {
         switch url.pathExtension.lowercased() {
@@ -111,16 +97,19 @@ actor IndexerActor {
         try? String(contentsOf: url, encoding: .utf8)
     }
     
+    /// Splits a large block of text into smaller, more manageable chunks.
     private func chunk(text: String) -> [String] {
         return text.components(separatedBy: .newlines)
             .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty && $0.count > 10 }
+            .filter { !$0.isEmpty && $0.count > 10 } // Ignore empty or very short lines
     }
     
+    // MARK: - Database Operations
+    
     private func save(chunks: [String], for url: URL, context: ModelContext) async {
+        // Clear out any old data for this same file URL
         let existingFile = fetchExistingFile(for: url, context: context)
         if let existingFile {
-            print("Re-indexing... deleting old file data.")
             context.delete(existingFile)
         }
         

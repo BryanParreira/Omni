@@ -1,11 +1,11 @@
 import Foundation
 import AppKit
-import ScreenCaptureKit // <-- ADD THIS IMPORT
+// import ScreenCaptureKit // <-- REMOVED
 
 /// This helper struct manages and requests system-level permissions.
 struct PermissionsHelper {
     
-    // --- ACCESSIBILITY (No changes) ---
+    // --- ACCESSIBILITY ---
     
     /**
      Checks if the app has already been granted Accessibility permissions.
@@ -47,26 +47,5 @@ struct PermissionsHelper {
     }
     
     // --- SCREEN CAPTURE (New section) ---
-    
-    /**
-     Checks for Screen Recording permissions. If not granted, it will
-     trigger the system prompt for the user.
-     
-     This is needed for the OCR fallback.
-     */
-    static func checkAndRequestScreenCapture() {
-        // This is the modern way to check/request.
-        // It will prompt the user if access is not already granted.
-        // We request a list of windows, which triggers the prompt.
-        Task { @MainActor in
-            do {
-                // We ask for .window content, including .onScreenWindowsOnly.
-                // This is enough to trigger the prompt.
-                let _ = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-                print("Screen Capture permission is granted.")
-            } catch {
-                print("Screen Capture permission request failed: \(error.localizedDescription)")
-            }
-        }
-    }
+    // --- 🛑 REMOVED unused Screen Capture section 🛑 ---
 }

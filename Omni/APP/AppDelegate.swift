@@ -14,7 +14,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     let modelContainer: ModelContainer
     
-    // --- 🛑 NEW: Add the @AppStorage property here 🛑 ---
     // This reads the *actual* value from UserDefaults.
     @AppStorage("hasCompletedSetup") var hasCompletedSetup: Bool = false
     
@@ -34,9 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               fileIndexer: fileIndexer!)
         
-        // --- 🛑 THIS IS THE FIX 🛑 ---
-        // We now check the *real* 'hasCompletedSetup' variable
-        // instead of forcing it to 'false'.
+        // 2. Check the *real* setup status
         if !hasCompletedSetup {
             // This will run if setup is NOT complete
             launchSetupWizard()
@@ -45,7 +42,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             launchMenuBarApp()
             NSApp.setActivationPolicy(.accessory)
         }
-        // --- 🛑 END OF FIX 🛑 ---
     }
     
     /// This function shows the SetupView in its own window.
@@ -82,9 +78,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusBar()
         hotkeyManager?.registerHotkey()
         
-        // --- REMOVED this line ---
-        // We don't need to show the panel on every single launch
-        // panelController?.show()
+        // panelController?.show() // Removed: Don't show panel on launch
     }
     
     private func setupStatusBar() {

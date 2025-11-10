@@ -15,7 +15,6 @@ class FileSearchService {
         
         do {
             // --- 1. PRIMARY (KEYWORD) SEARCH ---
-            // First, fetch *all* chunks that contain the query text.
             let keywordDescriptor = FetchDescriptor<FileChunk>(
                 predicate: #Predicate { chunk in
                     chunk.text.localizedStandardContains(query)
@@ -23,23 +22,21 @@ class FileSearchService {
             )
             let allQueryChunks = try modelContext.fetch(keywordDescriptor)
             
-            // Now, filter them in Swift to match *only* our session's files.
             let validChunks = allQueryChunks.filter { chunk in
-                // This is the correct, safe way to check
                 guard let fileID = chunk.file?.id else { return false }
                 return fileURLs.contains(fileID)
             }
 
             // --- 2. FALLBACK (GENERIC) SEARCH ---
-            // If the keyword search found nothing, but we *do* have files...
             if validChunks.isEmpty && !fileURLs.isEmpty {
-                print("No specific chunks found. Falling back to generic context.")
                 
-                // Fetch *all* chunks from the database
+                // --- 🛑 CLEANUP 🛑 ---
+                // Removed the debug 'print' statement from this block
+                // --- 🛑 END OF CLEANUP 🛑 ---
+                
                 let allChunksDescriptor = FetchDescriptor<FileChunk>()
                 let allChunksInDB = try modelContext.fetch(allChunksDescriptor)
                 
-                // Filter *in Swift* for just the files we care about
                 let fallbackChunks = allChunksInDB
                     .filter { chunk in
                         guard let fileID = chunk.file?.id else { return false }
@@ -48,7 +45,6 @@ class FileSearchService {
                     .sorted { $0.chunkIndex < $1.chunkIndex } // Sort by index
                     .prefix(5) // Take the first 5
                 
-                // Return the formatted fallback chunks
                 return fallbackChunks.map { chunk in
                     ChunkSearchResult(
                         text: chunk.text,
@@ -59,7 +55,6 @@ class FileSearchService {
             }
             
             // --- 3. RETURN KEYWORD RESULTS ---
-            // If the primary search *did* find chunks, return them.
             return validChunks.map { chunk in
                 ChunkSearchResult(
                     text: chunk.text,

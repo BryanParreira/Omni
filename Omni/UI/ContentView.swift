@@ -7,10 +7,6 @@ struct ContentView: View {
     // "Catch" the FileIndexer from the environment
     @Environment(FileIndexer.self) private var fileIndexer
     
-    // --- REMOVED ---
-    // @AppStorage("selectedAppearance") private var selectedAppearance: Appearance = .system
-    // --- END REMOVED ---
-    
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var allSessions: [ChatSession]
     
@@ -20,13 +16,9 @@ struct ContentView: View {
         NavigationSplitView {
             // --- SIDEBAR ---
             SidebarView(selectedSession: $selectedSession)
-                // --- 🛑 THIS IS THE FIX 🛑 ---
-                // We set a single, fixed width to prevent resizing.
-                .frame(width: 200)
-                // --- 🛑 END OF FIX 🛑 ---
+                .frame(width: 200) // Lock the sidebar width
         } detail: {
             // --- DETAIL (CHAT) ---
-            
             NavigationStack {
                 if let session = selectedSession {
                     
@@ -40,10 +32,9 @@ struct ContentView: View {
                     
                 } else {
                     
-                    // --- THIS IS THE IMPROVED UI ---
+                    // --- Welcome / Empty State UI ---
                     VStack(spacing: 16) {
                         
-                        // We replaced "magnifyingglass.circle.fill" with "brain"
                         Image(systemName: "brain")
                             .font(.system(size: 50))
                             .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
@@ -68,7 +59,6 @@ struct ContentView: View {
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(Color(hex: "1A1A1A"))
-                    // --- END OF IMPROVED UI ---
                 }
             }
         }
@@ -78,9 +68,6 @@ struct ContentView: View {
                 selectedSession = allSessions.first
             }
         }
-        // --- REMOVED ---
-        // .preferredColorScheme(selectedAppearance.colorScheme)
-        // --- END REMOVED ---
     }
     
     // This is a helper function for the "empty state"

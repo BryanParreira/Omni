@@ -8,7 +8,7 @@ struct ChatView: View {
     
     @State private var isDropTarget = false
     
-    // --- 🛑 NEW STATE FOR ANIMATION 🛑 ---
+    // This state is for the 3-dot loading animation
     @State private var isAnimatingDots = false
     
     var session: ChatSession {
@@ -19,6 +19,7 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
 
+    /// Shows file pills if files are attached AND no messages have been sent yet.
     private var shouldShowFilePills: Bool {
         let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
         let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
@@ -49,9 +50,7 @@ struct ChatView: View {
                                 .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                             }
                             
-                            // --- 🛑 THIS IS THE FIX 🛑 ---
-                            // Replaced 'LoadingIndicatorView()' with the
-                            // 3-dot animation code directly.
+                            // This is the 3-dot loading animation
                             if viewModel.isLoading {
                                 HStack(alignment: .top, spacing: 12) {
                                     VStack(alignment: .leading, spacing: 8) {
@@ -77,10 +76,9 @@ struct ChatView: View {
                                     Spacer(minLength: 100)
                                 }
                                 .onAppear { isAnimatingDots = true }
-                                .onDisappear { isAnimatingDots = false } // Added this for safety
+                                .onDisappear { isAnimatingDots = false }
                                 .transition(.scale.combined(with: .opacity))
                             }
-                            // --- 🛑 END OF FIX 🛑 ---
                         }
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
@@ -229,7 +227,7 @@ struct ChatView: View {
         }
     }
     
-    // ... (All helper functions remain unchanged) ...
+    // MARK: - View Builders
     
     @ViewBuilder
     private func suggestedActionButton(action: String, message: ChatMessage) -> some View {
@@ -249,6 +247,33 @@ struct ChatView: View {
         .buttonStyle(.plain)
         .padding(.leading, 40)
     }
+    
+    @ViewBuilder
+    private func dropOverlay() -> some View {
+        ZStack {
+            Color.black.opacity(0.6)
+            
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(
+                    Color(hex: "AAAAAA"),
+                    style: StrokeStyle(lineWidth: 2, dash: [10])
+                )
+                .padding(20)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "arrow.down.doc.fill")
+                    .font(.system(size: 50))
+                    .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                Text("Drop Files Here")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(Color(hex: "EAEAEA"))
+            }
+        }
+        .transition(.opacity)
+    }
+    
+    // MARK: - Helper Functions
     
     private func titleAndIcon(for action: String) -> (String, String) {
         let title: String
@@ -302,30 +327,5 @@ struct ChatView: View {
                 }
             }
         }
-    }
-    
-    @ViewBuilder
-    private func dropOverlay() -> some View {
-        ZStack {
-            Color.black.opacity(0.6)
-            
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(
-                    Color(hex: "AAAAAA"),
-                    style: StrokeStyle(lineWidth: 2, dash: [10])
-                )
-                .padding(20)
-            
-            VStack(spacing: 12) {
-                Image(systemName: "arrow.down.doc.fill")
-                    .font(.system(size: 50))
-                    .foregroundStyle(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
-                Text("Drop Files Here")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(Color(hex: "EAEAEA"))
-            }
-        }
-        .transition(.opacity)
     }
 }

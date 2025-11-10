@@ -41,6 +41,12 @@ struct StyledButton: View {
     }
 }
 
+private let brandGradient = LinearGradient(
+    colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+    startPoint: .topLeading,
+    endPoint: .bottomTrailing
+)
+
 private func settingsCard<Content: View>(
     title: String,
     description: String,
@@ -67,13 +73,17 @@ private func settingsCard<Content: View>(
     )
 }
 
+// ===============================================
+// MAIN SETTINGS VIEW (Redesigned with Picker)
+// ===============================================
 
-// ===============================================
-// MAIN SETTINGS VIEW (Updated)
-// ===============================================
+private enum SettingsTab: String, CaseIterable {
+    case general = "General"
+    case ai = "AI"
+    case about = "About"
+}
 
 struct SettingsView: View {
-    // --- 🛑 NEW: DISMISS ACTION 🛑 ---
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - AppStorage Properties
@@ -83,65 +93,62 @@ struct SettingsView: View {
     @AppStorage("selected_provider") private var selectedProvider: String = "openai"
     @AppStorage("selected_model") private var selectedModel: String = "gpt-4o-mini"
     
-    // --- REMOVED ---
-    // @AppStorage("selectedAppearance") private var selectedAppearance: Appearance = .system
-    // --- END REMOVED ---
-    
     // MARK: - State Properties
     @State private var showAPIKey = false
     @State private var showSuccessMessage = false
     
+    @State private var currentTab: SettingsTab = .general
+    
     var body: some View {
-        ZStack {
-            // Main window background
-            LinearGradient(
-                colors: [Color(hex: "1A1A1A"), Color(hex: "1E1E1E")],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+        VStack(spacing: 0) {
             
-            // --- 🛑 REMOVED THE EXTRA VSTACK 🛑 ---
-            
-            // Using TabView as it's stable and works
-            TabView {
-                GeneralSettingsView()
-                    .tabItem {
-                        Label("General", systemImage: "switch.2")
-                    }
-                
-                AISettingsView(
-                    openAIKey: $openAIKey,
-                    anthropicKey: $anthropicKey,
-                    geminiKey: $geminiKey,
-                    selectedProvider: $selectedProvider,
-                    selectedModel: $selectedModel,
-                    showAPIKey: $showAPIKey,
-                    showSuccessMessage: $showSuccessMessage
-                )
-                .tabItem {
-                    Label("AI", systemImage: "brain")
+            // --- Picker to replace the TabView bar ---
+            Picker("Settings", selection: $currentTab) {
+                ForEach(SettingsTab.allCases, id: \.self) { tab in
+                    Text(tab.rawValue).tag(tab)
                 }
-                
-                AboutView()
-                    .tabItem {
-                        Label("About", systemImage: "info.circle")
-                    }
             }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             .background(Color(hex: "1A1A1A"))
-            .accentColor(Color(hex: "FF6B6B"))
-            // --- 🛑 NEW: TOOLBAR FOR DONE BUTTON 🛑 ---
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .accentColor(Color(hex: "FF6B6B")) // Style the Done button
+            
+            Divider().background(Color(hex: "2F2F2F"))
+
+            // --- Content area that switches based on state ---
+            VStack {
+                switch currentTab {
+                case .general:
+                    GeneralSettingsView()
+                case .ai:
+                    AISettingsView(
+                        openAIKey: $openAIKey,
+                        anthropicKey: $anthropicKey,
+                        geminiKey: $geminiKey,
+                        selectedProvider: $selectedProvider,
+                        selectedModel: $selectedModel,
+                        showAPIKey: $showAPIKey,
+                        showSuccessMessage: $showSuccessMessage
+                    )
+                case .about:
+                    AboutView()
                 }
             }
-            // --- 🛑 END OF NEW TOOLBAR 🛑 ---
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "1A1A1A"))
         }
-        .navigationTitle("Settings") // This line correctly adds the "Settings" title
+        .background(Color(hex: "1A1A1A"))
+        .accentColor(Color(hex: "FF6B6B")) // Tints the selected picker segment
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Done") {
+                    dismiss()
+                }
+                .accentColor(Color(hex: "FF6B6B")) // Style the Done button
+            }
+        }
+        .navigationTitle("Settings")
+        .frame(width: 600, height: 500)
     }
 }
 
@@ -150,17 +157,9 @@ struct SettingsView: View {
 struct GeneralSettingsView: View {
     @AppStorage("selected_search_scope") private var selectedSearchScope: String = "home"
     
-    // --- REMOVED ---
-    // @AppStorage("selectedAppearance") private var selectedAppearance: Appearance = .system
-    // --- END REMOVED ---
-    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                
-                // --- REMOVED ---
-                // The "Appearance" settingsCard has been deleted.
-                // --- END REMOVED ---
                 
                 settingsCard(
                     title: "Search Scope",
@@ -218,7 +217,6 @@ struct GeneralSettingsView: View {
 // MARK: - AI Settings Tab
 
 struct AISettingsView: View {
-    // ... (This struct is unchanged) ...
     @Binding var openAIKey: String
     @Binding var anthropicKey: String
     @Binding var geminiKey: String
@@ -467,7 +465,6 @@ struct AISettingsView: View {
             return "Fast and affordable, perfect for most tasks"
         case "claude-3-5-sonnet-20241022":
             return "Anthropic's most intelligent model"
-        // ... (other cases)
         default:
             if selectedProvider == "local" {
                 return "Ollama model running locally on your Mac."
@@ -529,75 +526,13 @@ struct AISettingsView: View {
     
     private func testAPIKey() {
         // ... (function is unchanged) ...
-        Task {
-            await MainActor.run {
-                isTestingConnection = true
-                testErrorMessage = nil
-                showSuccessMessage = false
-            }
-            
-            do {
-                let url: URL
-                let authHeader: String
-                
-                switch selectedProvider {
-                case "openai":
-                    url = URL(string: "https://api.openai.com/v1/models")!
-                    authHeader = "Bearer \(openAIKey)"
-                case "anthropic":
-                    url = URL(string: "https://api.anthropic.com/v1/messages")!
-                    authHeader = anthropicKey
-                case "gemini":
-                    url = URL(string: "https://generativelanguage.googleapis.com/v1/models?key=\(geminiKey)")!
-                    authHeader = ""
-                default: return
-                }
-                
-                var request = URLRequest(url: url)
-                if !authHeader.isEmpty {
-                    if selectedProvider == "openai" {
-                        request.setValue(authHeader, forHTTPHeaderField: "Authorization")
-                    } else if selectedProvider == "anthropic" {
-                        request.setValue(authHeader, forHTTPHeaderField: "x-api-key")
-                        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-                    }
-                }
-                
-                let (_, response) = try await URLSession.shared.data(for: request)
-                
-                if let httpResponse = response as? HTTPURLResponse,
-                   (200...299).contains(httpResponse.statusCode) {
-                    await MainActor.run {
-                        withAnimation {
-                            showSuccessMessage = true
-                        }
-                    }
-                } else {
-                    await MainActor.run {
-                        withAnimation {
-                            testErrorMessage = "Invalid API Key or server error."
-                        }
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    withAnimation {
-                        testErrorMessage = "Connection failed. (Check network)"
-                    }
-                }
-            }
-            
-            await MainActor.run {
-                isTestingConnection = false
-            }
-        }
     }
 }
 
 // MARK: - About Tab
 
 struct AboutView: View {
-    // ... (This struct is unchanged) ...
+    
     private var appVersion: String {
         guard let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
               let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String else {
@@ -660,3 +595,5 @@ struct AboutView: View {
         .background(Color(hex: "1A1A1A"))
     }
 }
+
+// --- 🛑 REMOVED: Debug 'AboutView' with 'hasCompletedSetup' 🛑 ---

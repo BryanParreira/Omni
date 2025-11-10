@@ -1,9 +1,9 @@
 import Foundation
-import SwiftSoup // The package we just added
+import SwiftSoup
 
 class WebScraperService {
     
-    /// Fetches a URL and returns the clean, visible text.
+    /// Fetches a URL, parses the HTML, and returns the clean, visible text.
     func fetchAndCleanText(from url: URL) async -> String? {
         do {
             // 1. Fetch the web page data
@@ -11,7 +11,7 @@ class WebScraperService {
             
             // 2. Convert data to an HTML string
             guard let htmlString = String(data: data, encoding: .utf8) else {
-                print("Could not decode HTML")
+                print("Could not decode HTML from: \(url)")
                 return nil
             }
             
@@ -23,7 +23,7 @@ class WebScraperService {
             return cleanText
             
         } catch {
-            print("Error scraping web page: \(error.localizedDescription)")
+            print("Error scraping web page \(url): \(error.localizedDescription)")
             return nil
         }
     }

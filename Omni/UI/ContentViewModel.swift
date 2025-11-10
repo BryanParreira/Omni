@@ -6,6 +6,8 @@ import AppKit
 @MainActor
 class ContentViewModel: ObservableObject {
     
+    // MARK: - Properties
+    
     var modelContext: ModelContext
     @Published var currentSession: ChatSession
     @Published var inputText: String = ""
@@ -18,15 +20,17 @@ class ContentViewModel: ObservableObject {
     
     private var fileIndexer: FileIndexer
     private let searchService = FileSearchService()
-    
-    // --- 🛑 NEW: WEB SCRAPER 🛑 ---
     private let scraper = WebScraperService()
+    
+    // MARK: - Init
     
     init(modelContext: ModelContext, session: ChatSession, fileIndexer: FileIndexer) {
         self.modelContext = modelContext
         self.currentSession = session
         self.fileIndexer = fileIndexer
     }
+    
+    // MARK: - Public Methods
     
     func focusInput() {
         shouldFocusInput = true
@@ -51,7 +55,6 @@ class ContentViewModel: ObservableObject {
             
             for url in newURLs {
                 // Only stop access for security-scoped URLs (file drops)
-                // Temp files (like from web) don't need this.
                 _ = url.startAccessingSecurityScopedResource()
                 url.stopAccessingSecurityScopedResource()
             }
@@ -73,11 +76,9 @@ class ContentViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         
-        // --- 🛑 NEW: URL CHECK 🛑 ---
-        // Check if the input is a valid URL
+        // --- 1. URL Check ---
         if let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased()) {
             
-            // It's a URL, so we process it as a web source
             isLoading = true
             inputText = "" // Clear the input field
             
@@ -117,13 +118,10 @@ class ContentViewModel: ObservableObject {
                     }
                 }
             }
-            
-            // Stop here. Do not send this as a chat message.
-            return
+            return // Stop here. Do not send this as a chat message.
         }
-        // --- 🛑 END OF NEW URL CHECK 🛑 ---
         
-        // If it's not a URL, continue with the normal send message logic
+        // --- 2. Standard Message Logic ---
         
         objectWillChange.send() // This hides the file pills
         
@@ -277,8 +275,8 @@ class ContentViewModel: ObservableObject {
         }
     }
     
-    // --- 🛑 THIS IS THE FIX 🛑 ---
-    // The full function body has been restored.
+    // MARK: - Private Helpers
+    
     private func titleAndIcon(for action: String) -> (String, String) {
         switch action {
         case "DRAFT_EMAIL":
@@ -297,9 +295,7 @@ class ContentViewModel: ObservableObject {
             return (action.replacingOccurrences(of: "_", with: " ").capitalized, "sparkles")
         }
     }
-    // --- 🛑 END OF FIX 🛑 ---
     
-    // --- 🛑 NEW HELPER FUNCTION 🛑 ---
     /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
         let tempDirectory = FileManager.default.temporaryDirectory
@@ -309,7 +305,6 @@ class ContentViewModel: ObservableObject {
         
         do {
             try text.write(to: fileURL, atomically: true, encoding: .utf8)
-            // This temp file doesn't need security-scoped access
             return fileURL
         } catch {
             print("Error saving temp file: \(error.localizedDescription)")

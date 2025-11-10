@@ -5,17 +5,12 @@ class OmniPanel: NSPanel {
     
     init(contentView: NSView) {
         
-        // ===============================================
-        // THIS IS THE FIX:
-        // We are adding .titled and .closable back
-        // ===============================================
         super.init(
             contentRect: contentView.bounds,
             styleMask: [.nonactivatingPanel, .closable, .titled, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
-        // ===============================================
         
         // Set the panel's properties
         self.isFloatingPanel = true

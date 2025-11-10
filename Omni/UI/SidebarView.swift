@@ -1,13 +1,8 @@
 import SwiftUI
 import SwiftData
-// --- REMOVED: import EventKit ---
 
 struct SidebarView: View {
     @Environment(\.modelContext) private var modelContext
-    
-    // --- REMOVED ---
-    // @Environment(CalendarService.self) private var calendarService
-    // --- END REMOVED ---
     
     @Query(sort: \ChatSession.startDate, order: .reverse)
     private var chatSessions: [ChatSession]
@@ -17,6 +12,9 @@ struct SidebarView: View {
     @State private var renamingSession: ChatSession? = nil
     @State private var renameText: String = ""
     @FocusState private var isRenameFieldFocused: Bool
+    
+    // --- 🛑 NEW: State for modal Settings sheet 🛑 ---
+    @State private var isShowingSettings: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -34,10 +32,6 @@ struct SidebarView: View {
             Rectangle()
                 .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
-            
-            // --- REMOVED ---
-            // The entire "Calendar section" and its Divider are gone
-            // --- END REMOVED ---
             
             // List of chats
             List(chatSessions, selection: $selectedSession) { session in
@@ -75,14 +69,15 @@ struct SidebarView: View {
             .listStyle(.sidebar)
             .scrollContentBackground(.hidden)
             
-            // --- 🛑 NEW SETTINGS BUTTON 🛑 ---
+            // --- 🛑 MODIFIED: Settings Button 🛑 ---
             Spacer() // Pushes the button to the bottom
             
             Rectangle()
                 .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
             
-            NavigationLink(destination: SettingsView()) {
+            // This is now a Button that presents a sheet
+            Button(action: { isShowingSettings = true }) {
                 Label("Settings", systemImage: "gear")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(Color(hex: "EAEAEA"))
@@ -90,17 +85,16 @@ struct SidebarView: View {
             }
             .buttonStyle(.plain)
             .padding()
-            // --- 🛑 END OF NEW BUTTON 🛑 ---
+            // --- 🛑 END OF MODIFICATION 🛑 ---
         }
         .background(Color(hex: "1E1E1E"))
+        // This sheet presents the SettingsView modally
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsView()
+        }
     }
     
-    // --- REMOVED ---
-    // The 'calendarSection()' and 'eventRow()' functions are gone
-    // --- END REMOVED ---
-    
     private func createNewChat() {
-        // ... (This function is unchanged) ...
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
         
@@ -117,7 +111,6 @@ struct SidebarView: View {
     }
     
     private func deleteSession(_ session: ChatSession) {
-        // ... (This function is unchanged) ...
         if selectedSession == session {
             selectedSession = nil
         }
@@ -126,7 +119,6 @@ struct SidebarView: View {
     }
     
     private func startRename(session: ChatSession) {
-        // ... (This function is unchanged) ...
         renamingSession = session
         renameText = session.title
         
@@ -136,7 +128,6 @@ struct SidebarView: View {
     }
     
     private func submitRename(session: ChatSession) {
-        // ... (This function is unchanged) ...
         guard renamingSession == session else { return }
         
         if !renameText.isEmpty {

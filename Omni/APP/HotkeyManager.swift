@@ -39,10 +39,7 @@ class HotkeyManager {
         let callback: EventHandlerUPP = { _, event, userData in
             guard let userData = userData else { return noErr }
             
-            // --- THIS IS THE FIX ---
-            // Changed 'takeUnpinnedRef()' to 'takeUnretainedValue()'
             let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-            // --- END OF FIX ---
             
             // Now it just toggles the panel.
             manager.panelController?.toggle()

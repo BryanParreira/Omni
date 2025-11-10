@@ -178,7 +178,7 @@ struct SetupView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header: Omni Setup Title and Progress
+            // Header
             setupHeader
             
             // Content Area
@@ -195,7 +195,7 @@ struct SetupView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(hex: "1A1A1A"))
             
-            // Footer: Navigation Buttons
+            // Footer
             setupFooter
         }
         .frame(width: 700, height: 750)
@@ -532,28 +532,24 @@ struct SetupView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    // --- 🛑 THIS IS THE FIX 🛑 ---
-                    // The .foregroundColor() modifier has been replaced
-                    // with .foregroundStyle() to accept the gradient.
                     HStack(alignment: .top) {
                         Text("1.")
                             .fontWeight(.bold)
-                            .foregroundStyle(brandGradient)
+                            .foregroundStyle(brandGradient) // Corrected
                         Text("Click the button below to open your Mac's **System Settings** directly to the 'Full Disk Access' section.")
                     }
                     HStack(alignment: .top) {
                         Text("2.")
                             .fontWeight(.bold)
-                            .foregroundStyle(brandGradient)
+                            .foregroundStyle(brandGradient) // Corrected
                         Text("Click the **'+'** button (you might need to unlock with your password), then navigate to your **Applications** folder and add **Omni**.")
                     }
                     HStack(alignment: .top) {
                         Text("3.")
                             .fontWeight(.bold)
-                            .foregroundStyle(brandGradient)
+                            .foregroundStyle(brandGradient) // Corrected
                         Text("Crucially, make sure the **toggle switch for Omni is turned ON** in the list.")
                     }
-                    // --- 🛑 END OF FIX 🛑 ---
                 }
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "AAAAAA"))
