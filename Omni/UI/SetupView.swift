@@ -53,43 +53,6 @@ private struct SecondaryButtonStyle: ButtonStyle {
     }
 }
 
-// Visual row for feature highlights (used on page 2)
-private struct FeatureHighlightRow: View {
-    let icon: String // SF Symbol name
-    let title: String
-    let description: String
-    
-    var body: some View {
-        HStack(spacing: 20) {
-            Image(systemName: icon)
-                .font(.system(size: 24, weight: .medium))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(brandGradient, Color(hex: "EAEAEA").opacity(0.8))
-                .frame(width: 45, height: 45)
-                .background(Color(hex: "2F2F2F"))
-                .cornerRadius(10)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                
-                Text(description)
-                    .font(.body)
-                    .foregroundColor(Color(hex: "AAAAAA"))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(Color(hex: "242424"))
-        )
-    }
-}
-
 // Card for AI provider choices (Cloud vs. Local)
 private struct AIChoiceCard: View {
     let title: String
@@ -160,6 +123,363 @@ private struct AIChoiceCard: View {
     }
 }
 
+// MARK: - Animated Mock Views
+
+// Mockup for Welcome Page (Chat Demo)
+private struct AnimatedChatMock: View {
+    @State private var showFile = false
+    @State private var showQuestion = false
+    @State private var showLoading = false
+    @State private var showAnswer = false
+    @State private var resetAnimation = false
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            // Mock Chat
+            VStack(spacing: 12) {
+                if showFile {
+                    HStack {
+                        Image(systemName: "doc.text.fill")
+                        Text("Company_Report.pdf")
+                        Spacer()
+                    }
+                    .font(.caption)
+                    .padding(8)
+                    .background(Color(hex: "2F2F2F"))
+                    .cornerRadius(6)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                
+                if showQuestion {
+                    Text("What's the main takeaway?")
+                        .font(.caption)
+                        .padding(10)
+                        .background(Color(hex: "3A3A3A"))
+                        .cornerRadius(10)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+                
+                if showLoading {
+                    HStack(spacing: 4) {
+                        ForEach(0..<3) { i in
+                            Circle().frame(width: 4, height: 4)
+                        }
+                    }
+                    .foregroundColor(Color(hex: "8A8A8A"))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .transition(.opacity)
+                }
+                
+                if showAnswer {
+                    Text("The main takeaway is a 20% increase in Q4 revenue, driven by new market expansion.")
+                        .font(.caption)
+                        .padding(10)
+                        .background(Color(hex: "2A2A2A"))
+                        .cornerRadius(10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                }
+                Spacer()
+            }
+            .padding(12)
+        }
+        .frame(width: 400, height: 200)
+        .background(Color(hex: "1A1A1A"))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
+        .shadow(color: .black.opacity(0.4), radius: 15, x: 0, y: 10)
+        .onAppear {
+            startAnimation()
+        }
+        .onChange(of: resetAnimation) { _, _ in
+            startAnimation()
+        }
+    }
+    
+    func startAnimation() {
+        showFile = false
+        showQuestion = false
+        showLoading = false
+        showAnswer = false
+        
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.5)) {
+            showFile = true
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(1.5)) {
+            showQuestion = true
+        }
+        withAnimation(.easeInOut.delay(2.5)) {
+            showLoading = true
+        }
+        withAnimation(.easeInOut.delay(3.5)) {
+            showLoading = false
+            showAnswer = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
+            resetAnimation.toggle()
+        }
+    }
+}
+
+// Mockup for Features Page (Web Scrape)
+private struct AnimatedWebScrapeMock: View {
+    @State private var showURL = false
+    @State private var showLoading = false
+    @State private var showPill = false
+    @State private var resetAnimation = false
+
+    var body: some View {
+        VStack(spacing: 15) {
+            HStack(spacing: 8) {
+                Image(systemName: "text.cursor")
+                    .foregroundColor(Color(hex: "666666"))
+                if showURL {
+                    Text("https://en.wikipedia.org/wiki/Swift...")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                        .transition(.opacity)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "242424")))
+            
+            if showLoading {
+                ProgressView()
+                    .scaleEffect(0.8)
+                    .transition(.opacity)
+            }
+            
+            if showPill {
+                HStack {
+                    Image(systemName: "doc.text.fill")
+                    Text("en.wikipedia.org.txt")
+                    Spacer()
+                }
+                .font(.caption)
+                .padding(8)
+                .background(Color(hex: "2F2F2F"))
+                .cornerRadius(6)
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color(hex: "1A1A1A"))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
+        .onAppear { startAnimation() }
+        .onChange(of: resetAnimation) { _, _ in startAnimation() }
+    }
+    
+    func startAnimation() {
+        showURL = false
+        showLoading = false
+        showPill = false
+        
+        withAnimation(.easeInOut.delay(0.5)) {
+            showURL = true
+        }
+        withAnimation(.easeInOut.delay(1.5)) {
+            showURL = false
+            showLoading = true
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(2.5)) {
+            showLoading = false
+            showPill = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            resetAnimation.toggle()
+        }
+    }
+}
+
+// Mockup for Features Page (OCR)
+private struct AnimatedOCRMock: View {
+    @State private var showImage = false
+    @State private var showLoading = false
+    @State private var showPill = false
+    @State private var resetAnimation = false
+    
+    var body: some View {
+        VStack(spacing: 15) {
+            if showImage {
+                Image(systemName: "photo.fill")
+                    .font(.system(size: 30))
+                    .foregroundStyle(brandGradient)
+                    .transition(.scale.combined(with: .opacity))
+            }
+            
+            if showLoading {
+                ProgressView()
+                    .scaleEffect(0.8)
+                    .transition(.opacity)
+            }
+            
+            if showPill {
+                HStack {
+                    Image(systemName: "doc.text.fill")
+                    Text("Assignment.jpg.txt")
+                    Spacer()
+                }
+                .font(.caption)
+                .padding(8)
+                .background(Color(hex: "2F2F2F"))
+                .cornerRadius(6)
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color(hex: "1A1A1A"))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
+        .onAppear { startAnimation() }
+        .onChange(of: resetAnimation) { _, _ in startAnimation() }
+    }
+    
+    func startAnimation() {
+        showImage = false
+        showLoading = false
+        showPill = false
+        
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.5)) {
+            showImage = true
+        }
+        withAnimation(.easeInOut.delay(1.5)) {
+            showImage = false
+            showLoading = true
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(2.5)) {
+            showLoading = false
+            showPill = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            resetAnimation.toggle()
+        }
+    }
+}
+
+// Mockup for Features Page (Global Library)
+private struct AnimatedLibraryMock: View {
+    @State private var brainOn = false
+    @State private var resetAnimation = false
+
+    var body: some View {
+        VStack(spacing: 15) {
+            Image(systemName: "brain")
+                .font(.system(size: 30))
+                .foregroundColor(brainOn ? Color(hex: "FF6B6B") : Color(hex: "666666"))
+                .shadow(
+                    color: brainOn ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
+                    radius: brainOn ? 8 : 0
+                )
+            
+            Text(brainOn ? "Global Library Active" : "Global Library Inactive")
+                .font(.callout)
+                .fontWeight(.semibold)
+                .foregroundColor(brainOn ? .white : Color(hex: "AAAAAA"))
+            
+            Text("Access your key files in *any* chat.")
+                .font(.caption)
+                .foregroundColor(Color(hex: "AAAAAA"))
+        }
+        .padding()
+        .frame(maxWidth: .infinity, minHeight: 120)
+        .background(Color(hex: "1A1A1A"))
+        .cornerRadius(12)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
+        .onAppear { startAnimation() }
+        .onChange(of: resetAnimation) { _, _ in startAnimation() }
+    }
+    
+    func startAnimation() {
+        brainOn = false
+        withAnimation(.easeInOut(duration: 1.0).delay(1.0)) {
+            brainOn = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            resetAnimation.toggle()
+        }
+    }
+}
+
+// Mockup for Permissions Page
+private struct MockSettingsToggleView: View {
+    @State private var isAnimating = false
+    @State private var showPlus = true
+    @State private var showOmni = false
+    @State private var isToggled = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "app.dash")
+                    .font(.title2)
+                Text("Other App")
+                Spacer()
+                Toggle("", isOn: .constant(true)).labelsHidden()
+            }
+            .foregroundColor(Color(hex: "AAAAAA"))
+            .padding(8)
+            
+            if showOmni {
+                HStack {
+                    Image(systemName: "brain.head.profile")
+                        .font(.title2)
+                        .foregroundStyle(brandGradient)
+                    Text("Omni")
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Toggle("", isOn: $isToggled).labelsHidden()
+                }
+                .padding(8)
+                .background(Color.blue.opacity(0.3))
+                .cornerRadius(6)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+            
+            if showPlus {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(Color(hex: "8A8A8A"))
+                    .scaleEffect(isAnimating ? 1.2 : 1.0)
+                    .opacity(isAnimating ? 1.0 : 0.7)
+            }
+        }
+        .padding(12)
+        .frame(width: 250, height: 140, alignment: .topLeading)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "1A1A1A")))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "4A4A4A")))
+        .onAppear { startAnimation() }
+    }
+    
+    func startAnimation() {
+        isAnimating = false
+        showPlus = true
+        showOmni = false
+        isToggled = false
+        
+        withAnimation(.easeInOut(duration: 0.5).delay(1.0)) {
+            isAnimating = true
+        }
+        withAnimation(.easeInOut(duration: 0.5).delay(1.5)) {
+            isAnimating = false
+            showPlus = false
+            showOmni = true
+        }
+        withAnimation(.easeInOut(duration: 0.5).delay(2.5)) {
+            isToggled = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
+            startAnimation()
+        }
+    }
+}
+
 
 // MARK: - Main SetupView
 
@@ -174,7 +494,6 @@ struct SetupView: View {
     @State private var isGrantingAccess = false
     @State private var showingSettingsAlert = false
     
-    // State for the AI page
     @State private var cloudProvider: String = "openai"
     @State private var currentApiKey: String = ""
     
@@ -271,9 +590,7 @@ struct SetupView: View {
             
             Spacer()
             
-            // --- 🛑 THIS IS THE FIX 🛑 ---
-            // The logic for disabling the button was incorrect.
-            let isNextDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
+            let isDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
             
             if currentPage < 4 {
                 Button(action: {
@@ -281,11 +598,9 @@ struct SetupView: View {
                 }) {
                     Label("Next", systemImage: "chevron.right")
                 }
-                .buttonStyle(PrimaryButtonStyle(isDisabled: isNextDisabled))
-                .disabled(isNextDisabled)
+                .buttonStyle(PrimaryButtonStyle(isDisabled: isDisabled))
+                .disabled(isDisabled)
             } else {
-                // The "Finish Setup" button should never be disabled
-                // unless we add a final check (e.g., for permissions).
                 Button(action: {
                     completeSetup()
                 }) {
@@ -293,7 +608,6 @@ struct SetupView: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
             }
-            // --- 🛑 END OF FIX 🛑 ---
         }
         .padding(20)
         .background(Color(hex: "242424"))
@@ -305,78 +619,91 @@ struct SetupView: View {
         VStack(spacing: 30) {
             Spacer()
             
-            Image(systemName: "brain.head.profile")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 150, height: 150)
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(brandGradient, Color(hex: "EAEAEA").opacity(0.8))
-                .symbolEffect(.bounce.up.byLayer, options: .repeating, value: currentPage)
-            
             Text("Welcome to Omni.")
                 .font(.system(size: 44, weight: .bold))
                 .foregroundColor(.white)
             
-            Text("Your personal AI assistant for everything on your Mac. Let's get started on setting up your ultimate workspace.")
+            Text("See how Omni turns your files into answers.")
                 .font(.title3)
                 .multilineTextAlignment(.center)
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.horizontal, 60)
+            
+            // The "wow" animation is now the first thing they see
+            AnimatedChatMock()
             
             Spacer()
         }
         .padding(40)
     }
     
+    // --- 🛑 REDESIGNED: Features Page (With NEW Animations) 🛑 ---
     private var featuresPage: some View {
         ScrollView {
             VStack(alignment: .center, spacing: 30) {
-                Text("Unlock Your Context")
+                Text("Unlock Your Full Context")
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
                 
-                Text("Explore how Omni can revolutionize your workflow.")
+                Text("Omni works with more than just text.")
                     .font(.title3)
                     .foregroundColor(Color(hex: "AAAAAA"))
                     .padding(.bottom, 10)
 
-                VStack(spacing: 20) {
-                    FeatureHighlightRow(
-                        icon: "doc.text.magnifyingglass",
-                        title: "Chat With Your Files",
-                        description: "Drop in PDFs, code, or text files to ask questions and get instant summaries."
-                    )
+                // Grid of new animations
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                     
-                    FeatureHighlightRow(
-                        icon: "photo.fill",
-                        title: "Read Text From Images (OCR)",
-                        description: "Drop in screenshots or photos, and Omni will read the text from them."
-                    )
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Analyze Web Pages")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "EAEAEA"))
+                            .padding(.leading, 5)
+                        AnimatedWebScrapeMock()
+                    }
                     
-                    FeatureHighlightRow(
-                        icon: "globe.americas.fill",
-                        title: "Analyze Web Pages",
-                        description: "Paste any URL into the chat bar to add live web content as a source."
-                    )
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Read Text From Images")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "EAEAEA"))
+                            .padding(.leading, 5)
+                        AnimatedOCRMock()
+                    }
                     
-                    FeatureHighlightRow(
-                        icon: "brain",
-                        title: "Global Source Library",
-                        description: "Give Omni a 'long-term memory' of your most important files, available in any chat."
-                    )
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Build a Global Library")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "EAEAEA"))
+                            .padding(.leading, 5)
+                        AnimatedLibraryMock()
+                    }
                     
-                    FeatureHighlightRow(
-                        icon: "doc.text.fill",
-                        title: "Generate Notebooks",
-                        description: "Turn any chat conversation into a clean, structured note to save your key insights."
-                    )
-                    
-                    FeatureHighlightRow(
-                        icon: "cpu.fill",
-                        title: "100% Private Local AI",
-                        description: "Connect to Ollama to run models on your Mac. Your files and chats never leave your device."
-                    )
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Access Anywhere")
+                            .font(.headline)
+                            .foregroundColor(Color(hex: "EAEAEA"))
+                            .padding(.leading, 5)
+                        // Placeholder for Hotkey
+                        VStack(spacing: 15) {
+                            Image(systemName: "keyboard.option")
+                                .font(.system(size: 30))
+                                .foregroundStyle(brandGradient)
+                            Text("⌥ + Space")
+                                .font(.system(.callout, design: .monospaced))
+                                .padding(8)
+                                .background(Color(hex: "2F2F2F"))
+                                .cornerRadius(6)
+                            
+                            Text("Summon Omni from any app.")
+                                .font(.caption)
+                                .foregroundColor(Color(hex: "AAAAAA"))
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, minHeight: 120)
+                        .background(Color(hex: "1A1A1A"))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
+                    }
                 }
             }
             .padding(40)
@@ -516,7 +843,7 @@ struct SetupView: View {
         .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
     
-    // --- 🛑 REDESIGNED: "Wow" Permissions Page 🛑 ---
+    // --- Permissions Page (with "Wow" Animation) ---
     private var permissionsPage: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text("Grant Full Disk Access")
@@ -596,87 +923,6 @@ struct SetupView: View {
         .padding(40)
     }
     
-    // --- 🛑 NEW: Mock UI for Permissions Page 🛑 ---
-    private struct MockSettingsToggleView: View {
-        @State private var isAnimating = false
-        @State private var showPlus = true
-        @State private var showOmni = false
-        @State private var isToggled = false
-        
-        var body: some View {
-            VStack(alignment: .leading, spacing: 8) {
-                // Mock app list
-                HStack {
-                    Image(systemName: "app.dash")
-                        .font(.title2)
-                    Text("Other App")
-                    Spacer()
-                    Toggle("", isOn: .constant(true)).labelsHidden()
-                }
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .padding(8)
-                
-                // Animated Omni row
-                if showOmni {
-                    HStack {
-                        Image(systemName: "brain.head.profile")
-                            .font(.title2)
-                            .foregroundStyle(brandGradient)
-                        Text("Omni")
-                            .fontWeight(.semibold)
-                        Spacer()
-                        Toggle("", isOn: $isToggled).labelsHidden()
-                    }
-                    .padding(8)
-                    .background(Color.blue.opacity(0.3))
-                    .cornerRadius(6)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                
-                // Animated Plus button
-                if showPlus {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(Color(hex: "8A8A8A"))
-                        .scaleEffect(isAnimating ? 1.2 : 1.0)
-                        .opacity(isAnimating ? 1.0 : 0.7)
-                }
-            }
-            .padding(12)
-            .frame(width: 250, height: 140, alignment: .topLeading)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "1A1A1A")))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "4A4A4A")))
-            .onAppear {
-                startAnimation()
-            }
-        }
-        
-        func startAnimation() {
-            // Reset
-            isAnimating = false
-            showPlus = true
-            showOmni = false
-            isToggled = false
-            
-            // Sequence
-            withAnimation(.easeInOut(duration: 0.5).delay(1.0)) {
-                isAnimating = true // Plus button pulses
-            }
-            withAnimation(.easeInOut(duration: 0.5).delay(1.5)) {
-                isAnimating = false
-                showPlus = false
-                showOmni = true // Omni app appears
-            }
-            withAnimation(.easeInOut(duration: 0.5).delay(2.5)) {
-                isToggled = true // Toggle turns on
-            }
-            // Loop
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
-                startAnimation()
-            }
-        }
-    }
-    
     // MARK: - Helper Functions
     
     private var apiKeyURL: URL {
@@ -735,11 +981,8 @@ struct SetupView: View {
     }
     
     private func completeSetup() {
-        // This was the fix: We must call handleNext() to save the
-        // AI settings if the user is on page 3 and clicks "Finish"
-        // (though they can't). This handles the page 4 click.
         if currentPage == 4 {
-             handleNext() // This will increment page to 5, but that's ok
+             handleNext()
         }
         
         hasCompletedSetup = true

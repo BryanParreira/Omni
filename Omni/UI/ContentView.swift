@@ -68,6 +68,16 @@ struct ContentView: View {
                 selectedSession = allSessions.first
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectChatSession"))) { notification in
+            // Listen for notification to select a specific chat session
+            if let sessionID = notification.userInfo?["sessionID"] as? UUID {
+                // Find the session with this ID
+                if let session = allSessions.first(where: { $0.id == sessionID }) {
+                    selectedSession = session
+                    print("✅ Selected new chat session: \(session.title)")
+                }
+            }
+        }
     }
     
     // This is a helper function for the "empty state"

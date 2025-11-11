@@ -2,6 +2,7 @@ import Foundation
 import SwiftData
 import PDFKit // To read PDFs
 import SwiftUI
+import Vision // Import Vision for OCR
 
 @MainActor
 @Observable
@@ -27,6 +28,9 @@ class FileIndexer {
 @ModelActor
 actor IndexerActor {
     
+    // Add OCRService instance
+    private let ocrService = OCRService()
+    
     /// This function runs safely on a background thread via the ModelActor.
     func indexFiles(at urls: [URL]) async -> [URL: [String]] {
         
@@ -46,7 +50,8 @@ actor IndexerActor {
                 defer { url.stopAccessingSecurityScopedResource() }
             }
             
-            guard let content = self.readFileContent(at: url) else {
+            // Changed to 'await' for OCR support
+            guard let content = await self.readFileContent(at: url) else {
                 print("Unsupported file type or failed to read: \(url.lastPathComponent)")
                 continue
             }
@@ -70,12 +75,16 @@ actor IndexerActor {
 
     // MARK: - File Reading
     
-    private func readFileContent(at url: URL) -> String? {
+    // Made async to support OCR
+    private func readFileContent(at url: URL) async -> String? {
         switch url.pathExtension.lowercased() {
         case "pdf":
             return readPDF(at: url)
         case "txt", "md", "swift", "py", "js", "html", "css", "json", "xml":
             return readText(at: url)
+        // Add image support with OCR
+        case "jpg", "jpeg", "png", "heic", "tiff", "gif", "bmp":
+            return await ocrService.extractText(from: url)
         default:
             return nil
         }

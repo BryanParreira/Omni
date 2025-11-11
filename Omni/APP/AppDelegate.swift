@@ -32,24 +32,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panelController = OmniPanelController(modelContainer: modelContainer,
                                               fileIndexer: fileIndexer!)
         
-        // --- 🛑 DEBUG: FORCING SETUP VIEW 🛑 ---
-        // We are temporarily skipping the 'hasCompletedSetup' check
-        // to always show the setup window during development.
-        
-        launchSetupWizard()
-
-        /*
-        // --- This is the PRODUCTION code to restore later ---
         if !hasCompletedSetup {
-            // This will run if setup is NOT complete
             launchSetupWizard()
         } else {
-            // This will run if setup IS complete
             launchMenuBarApp()
             NSApp.setActivationPolicy(.accessory)
         }
-        */
-        // --- 🛑 END OF DEBUG CHANGE 🛑 ---
+        
+        // Request accessibility permissions for text capture
+        requestAccessibilityPermissions()
     }
     
     /// This function shows the SetupView in its own window.
@@ -61,7 +52,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             .environment(fileIndexer!)
         
         setupWindow = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 700, height: 750), // Use new size
+            contentRect: NSRect(x: 0, y: 0, width: 700, height: 750),
             styleMask: [.titled, .closable, .fullSizeContentView],
             backing: .buffered,
             defer: false
@@ -85,6 +76,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager = HotkeyManager(panelController: panelController)
         setupStatusBar()
         hotkeyManager?.registerHotkey()
+        hotkeyManager?.registerTextCaptureHotkey() // NEW: Register text capture hotkey
     }
     
     private func setupStatusBar() {
@@ -118,5 +110,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
         return !hasCompletedSetup
+    }
+    
+    // NEW: Request accessibility permissions
+    private func requestAccessibilityPermissions() {
+        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true]
+        let accessEnabled = AXIsProcessTrustedWithOptions(options)
+        
+        if !accessEnabled {
+            print("⚠️ Accessibility permissions required for text capture hotkey functionality")
+        }
     }
 }

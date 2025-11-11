@@ -172,21 +172,22 @@ class ContentViewModel: ObservableObject {
                         context = "No relevant context found in the attached files for that query."
                     } else {
                         context = "RELEVANT CONTEXT:\n"
-                        context += chunks.map { "Chunk from '\($0.fileName)':\n\($0.text)" }
-                                         .joined(separator: "\n\n---\n\n")
+                        // MODIFIED: Normalize filenames for images to treat them as regular documents
+                        context += chunks.map { chunk in
+                            let displayName = normalizeFileName(chunk.fileName)
+                            return "Chunk from '\(displayName)':\n\(chunk.text)"
+                        }.joined(separator: "\n\n---\n\n")
                     }
                 }
                 
                 let chatHistory = Array(currentSession.messages)
                 
-                // --- 🛑 MODIFIED: 'aiResponse' is now just a String 🛑 ---
                 let aiResponse = try await LLMManager.shared.generateResponse(
                     chatHistory: chatHistory,
                     context: context,
                     files: allSourceURLs
                 )
                 
-                // --- 🛑 MODIFIED: 'suggestedAction' is removed 🛑 ---
                 botMessage = ChatMessage(
                     content: aiResponse,
                     isUser: false,
@@ -261,11 +262,20 @@ class ContentViewModel: ObservableObject {
         }
     }
     
-    // --- 🛑 REMOVED 'performAction' function 🛑 ---
-    
     // MARK: - Private Helpers
     
-    // --- 🛑 REMOVED 'titleAndIcon' function 🛑 ---
+    /// Normalizes filenames so images appear as generic documents to the AI
+    private func normalizeFileName(_ fileName: String) -> String {
+        let imageExtensions = ["jpg", "jpeg", "png", "heic", "tiff", "gif", "bmp"]
+        let fileExtension = (fileName as NSString).pathExtension.lowercased()
+        
+        if imageExtensions.contains(fileExtension) {
+            // Replace image filenames with generic "Document" names
+            return "Document.txt"
+        }
+        
+        return fileName
+    }
     
     /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
