@@ -5,93 +5,67 @@ import AppKit
 @MainActor
 class HotkeyManager {
     weak var panelController: OmniPanelController?
+    
+    // Stored references for our hotkeys
+    private var panelToggleHotKeyRef: EventHotKeyRef?
+    private var textCaptureHotKeyRef: EventHotKeyRef?
+    
+    // ONE shared event handler
     private var eventHandler: EventHandlerRef?
-    private var textCaptureEventHandler: EventHandlerRef?
+    
+    // Define your hotkeys
+    private let panelToggleHotKeyID = EventHotKeyID(signature: FourCharCode("omni".fourCharCodeValue), id: 1)
+    private let textCaptureHotKeyID = EventHotKeyID(signature: FourCharCode("omnt".fourCharCodeValue), id: 2)
     
     init(panelController: OmniPanelController?) {
         self.panelController = panelController
     }
     
-    func registerHotkey() {
-        let hotKeyID = EventHotKeyID(signature: FourCharCode("omni".fourCharCodeValue), id: 1)
-        var eventHotKey: EventHotKeyRef?
-        let keyCode = UInt32(kVK_Space)
-        let modifiers = UInt32(optionKey)
+    // This is the ONLY public function you call from AppDelegate
+    func registerAllHotkeys() {
+        // --- 1. Register Panel Toggle Hotkey ---
+        let panelKeyCode = UInt32(kVK_Space)
+        let panelModifiers = UInt32(optionKey) // Option+Space
         
-        let status = RegisterEventHotKey(
-            keyCode,
-            modifiers,
-            hotKeyID,
+        var status = RegisterEventHotKey(
+            panelKeyCode,
+            panelModifiers,
+            panelToggleHotKeyID,
             GetEventDispatcherTarget(),
             0,
-            &eventHotKey
+            &panelToggleHotKeyRef // Store the reference
         )
         
         if status != noErr {
-            print("Failed to register hotkey")
-            return
+            print("❌ ERROR: Failed to register panel toggle hotkey (Option+Space). Status: \(status)")
+        } else {
+            print("✅ Panel toggle hotkey registered.")
         }
+
+        // --- 2. Register Text Capture Hotkey ---
+        let captureKeyCode = UInt32(kVK_ANSI_X) // "X" key
+        let captureModifiers = UInt32(cmdKey | optionKey) // Cmd+Option+X
         
-        var eventSpec = EventTypeSpec(
-            eventClass: OSType(kEventClassKeyboard),
-            eventKind: UInt32(kEventHotKeyPressed)
-        )
-        
-        let callback: EventHandlerUPP = { _, event, userData in
-            guard let userData = userData else { return noErr }
-            
-            let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
-            
-            // Check which hotkey was pressed
-            var hotKeyID = EventHotKeyID()
-            GetEventParameter(
-                event,
-                EventParamName(kEventParamDirectObject),
-                EventParamType(typeEventHotKeyID),
-                nil,
-                MemoryLayout<EventHotKeyID>.size,
-                nil,
-                &hotKeyID
-            )
-            
-            if hotKeyID.id == 1 {
-                // Original panel toggle hotkey
-                manager.panelController?.toggle()
-            }
-            
-            return noErr
-        }
-        
-        InstallEventHandler(
+        status = RegisterEventHotKey(
+            captureKeyCode,
+            captureModifiers,
+            textCaptureHotKeyID,
             GetEventDispatcherTarget(),
-            callback,
-            1,
-            &eventSpec,
-            Unmanaged.passUnretained(self).toOpaque(),
-            &eventHandler
+            0,
+            &textCaptureHotKeyRef // Store the reference
         )
+        
+        if status != noErr {
+            print("❌ ERROR: Failed to register text capture hotkey (Cmd+Opt+X). Status: \(status)")
+        } else {
+            print("✅ Text capture hotkey registered.")
+        }
+        
+        // --- 3. Install ONE handler for BOTH ---
+        installSharedEventHandler()
     }
     
-    func registerTextCaptureHotkey() {
-        let hotKeyID = EventHotKeyID(signature: FourCharCode("omnt".fourCharCodeValue), id: 2)
-        var eventHotKey: EventHotKeyRef?
-        let keyCode = UInt32(kVK_ANSI_X) // "X" key
-        let modifiers = UInt32(cmdKey | optionKey) // Cmd+Option
-        
-        let status = RegisterEventHotKey(
-            keyCode,
-            modifiers,
-            hotKeyID,
-            GetEventDispatcherTarget(),
-            0,
-            &eventHotKey
-        )
-        
-        if status != noErr {
-            print("Failed to register text capture hotkey")
-            return
-        }
-        
+    private func installSharedEventHandler() {
         var eventSpec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),
             eventKind: UInt32(kEventHotKeyPressed)
@@ -102,7 +76,6 @@ class HotkeyManager {
             
             let manager = Unmanaged<HotkeyManager>.fromOpaque(userData).takeUnretainedValue()
             
-            // Check which hotkey was pressed
             var hotKeyID = EventHotKeyID()
             GetEventParameter(
                 event,
@@ -114,11 +87,17 @@ class HotkeyManager {
                 &hotKeyID
             )
             
-            if hotKeyID.id == 2 {
-                // Text capture hotkey
+            // --- THIS IS THE ROUTER ---
+            // It checks the ID and runs the correct code
+            switch hotKeyID.id {
+                
+            case manager.panelToggleHotKeyID.id:
+                print("🔥 Panel toggle hotkey pressed!")
+                manager.panelController?.toggle()
+                
+            case manager.textCaptureHotKeyID.id:
                 print("🔥 Text capture hotkey pressed!")
                 
-                // Capture selected text
                 guard let selectedText = HotkeyHelper.shared.captureSelectedText() else {
                     print("⚠️ No text selected")
                     return noErr
@@ -126,34 +105,60 @@ class HotkeyManager {
                 
                 print("📋 Captured text: \(selectedText.prefix(50))...")
                 
-                // Handle the captured text
                 Task { @MainActor in
                     manager.panelController?.handleCapturedText(selectedText)
                 }
+                
+            default:
+                break
             }
             
             return noErr
         }
         
-        InstallEventHandler(
+        // Install the SINGLE handler
+        let status = InstallEventHandler(
             GetEventDispatcherTarget(),
             callback,
             1,
             &eventSpec,
             Unmanaged.passUnretained(self).toOpaque(),
-            &textCaptureEventHandler
+            &eventHandler
         )
         
-        print("✅ Text capture hotkey registered: Cmd+Shift+T")
+        if status != noErr {
+            print("❌ ERROR: Failed to install shared event handler. Status: \(status)")
+        } else {
+            print("✅ Shared hotkey event handler installed.")
+        }
+    }
+
+    // This method is now nonisolated, so it can be called from deinit.
+    nonisolated func unregisterAllHotkeys() {
+        // We dispatch the actual cleanup work to the MainActor.
+        Task { @MainActor in
+            if let handler = self.eventHandler {
+                RemoveEventHandler(handler)
+                self.eventHandler = nil
+            }
+            
+            if let hotKeyRef = self.panelToggleHotKeyRef {
+                UnregisterEventHotKey(hotKeyRef)
+                self.panelToggleHotKeyRef = nil
+            }
+            
+            if let hotKeyRef = self.textCaptureHotKeyRef {
+                UnregisterEventHotKey(hotKeyRef)
+                self.textCaptureHotKeyRef = nil
+            }
+            
+            print("⌨️ All hotkeys and handlers unregistered.")
+        }
     }
     
     deinit {
-        if let handler = eventHandler {
-            RemoveEventHandler(handler)
-        }
-        if let handler = textCaptureEventHandler {
-            RemoveEventHandler(handler)
-        }
+        // This is now a safe nonisolated-to-nonisolated call.
+        unregisterAllHotkeys()
     }
 }
 

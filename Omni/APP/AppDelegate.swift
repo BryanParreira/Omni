@@ -75,8 +75,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func launchMenuBarApp() {
         hotkeyManager = HotkeyManager(panelController: panelController)
         setupStatusBar()
-        hotkeyManager?.registerHotkey()
-        hotkeyManager?.registerTextCaptureHotkey() // NEW: Register text capture hotkey
+        
+        // This one line replaces the two old ones and fixes the bug
+        hotkeyManager?.registerAllHotkeys()
     }
     
     private func setupStatusBar() {

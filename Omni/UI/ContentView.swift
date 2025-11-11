@@ -68,13 +68,29 @@ struct ContentView: View {
                 selectedSession = allSessions.first
             }
         }
+        // --- THIS IS THE CORRECTED BLOCK ---
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("SelectChatSession"))) { notification in
             // Listen for notification to select a specific chat session
-            if let sessionID = notification.userInfo?["sessionID"] as? UUID {
-                // Find the session with this ID
-                if let session = allSessions.first(where: { $0.id == sessionID }) {
+            guard let sessionID = notification.userInfo?["sessionID"] as? ChatSession.ID else { return }
+            
+            // 1. Try to find the session in the @Query array first (fastest)
+            if let session = allSessions.first(where: { $0.id == sessionID }) {
+                selectedSession = session
+                print("✅ Selected new chat session (from @Query): \(session.title)")
+            } else {
+                // 2. Not found. This means the @Query is stale.
+                //    Manually fetch it from the modelContext.
+                print("⚠️ Session not in @Query, fetching manually...")
+                let descriptor = FetchDescriptor<ChatSession>(
+                    predicate: #Predicate { $0.id == sessionID }
+                )
+                
+                // We're already on the main actor, so this is safe
+                if let session = try? modelContext.fetch(descriptor).first {
                     selectedSession = session
-                    print("✅ Selected new chat session: \(session.title)")
+                    print("✅ Selected new chat session (from manual fetch): \(session.title)")
+                } else {
+                    print("❌ CRITICAL: Failed to find new session in context.")
                 }
             }
         }
