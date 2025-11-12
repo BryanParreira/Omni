@@ -9,49 +9,76 @@ struct LibrarySettingsView: View {
     @State private var renameText = ""
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Library Projects")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Button(action: { showingNewProjectSheet = true }) {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                        Text("New Project")
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 14) {
+                // Header card
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Library Projects")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                        Text("Organize files for AI context")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(hex: "777777"))
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(hex: "FF6B6B"))
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+                    
+                    Spacer()
+                    
+                    Button(action: { showingNewProjectSheet = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("New Project")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            LinearGradient(
+                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
-            }
-            .padding()
-            
-            Divider()
-            
-            // Projects List
-            if libraryManager.projects.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 48))
-                        .foregroundColor(Color(hex: "FF6B6B"))
-                    Text("No projects yet")
-                        .font(.headline)
-                        .foregroundColor(.gray)
-                    Text("Create a project to organize your files")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
-                    VStack(spacing: 12) {
+                .padding(16)
+                .background(Color(hex: "222222"))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                )
+                
+                // Projects List
+                if libraryManager.projects.isEmpty {
+                    VStack(spacing: 14) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 36))
+                            .foregroundColor(Color(hex: "FF6B6B"))
+                        
+                        VStack(spacing: 6) {
+                            Text("No projects yet")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(Color(hex: "EAEAEA"))
+                            Text("Create a project to organize your files")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "888888"))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .background(Color(hex: "222222"))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                    )
+                } else {
+                    VStack(spacing: 10) {
                         ForEach(libraryManager.projects) { project in
                             ProjectRow(
                                 project: project,
@@ -75,11 +102,10 @@ struct LibrarySettingsView: View {
                             )
                         }
                     }
-                    .padding()
                 }
             }
+            .padding(24)
         }
-        .frame(minWidth: 600, minHeight: 400)
         .sheet(isPresented: $showingNewProjectSheet) {
             NewProjectSheet(
                 projectName: $newProjectName,
@@ -141,44 +167,47 @@ struct ProjectRow: View {
     let onRemoveFile: (LibraryFile) -> Void
     
     @State private var isExpanded = false
+    @State private var isHovered = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
             // Project Header
-            HStack {
-                Button(action: { withAnimation { isExpanded.toggle() } }) {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .foregroundColor(.secondary)
-                        .frame(width: 20)
+            HStack(spacing: 10) {
+                Button(action: { withAnimation(.easeOut(duration: 0.2)) { isExpanded.toggle() } }) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(Color(hex: "666666"))
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        .frame(width: 16)
                 }
                 .buttonStyle(.plain)
                 
-                Image(systemName: "folder.fill")
-                    .foregroundColor(project.isActive ? Color(hex: "FF6B6B") : .gray)
+                Image(systemName: project.isActive ? "folder.fill" : "folder")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(project.isActive ? Color(hex: "FF6B6B") : Color(hex: "777777"))
                 
                 Text(project.name)
-                    .font(.headline)
-                    .foregroundColor(project.isActive ? .primary : .secondary)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(Color(hex: "EAEAEA"))
                 
                 if project.isActive {
                     Text("ACTIVE")
-                        .font(.caption)
-                        .fontWeight(.bold)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(Color(hex: "FF6B6B"))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color(hex: "FF6B6B").opacity(0.2))
-                        .foregroundColor(Color(hex: "FF6B6B"))
-                        .cornerRadius(4)
+                        .background(Color(hex: "FF6B6B").opacity(0.15))
+                        .cornerRadius(3)
                 }
                 
-                Text("(\(project.files.count) files)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text("\(project.files.count)")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(hex: "666666"))
                 
                 Spacer()
                 
                 // Action Buttons
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Toggle("", isOn: .init(
                         get: { project.isActive },
                         set: { _ in onToggle() }
@@ -186,72 +215,90 @@ struct ProjectRow: View {
                     .toggleStyle(.switch)
                     .tint(Color(hex: "FF6B6B"))
                     .labelsHidden()
+                    .scaleEffect(0.8)
                     
                     Button(action: onAddFiles) {
                         Image(systemName: "plus.circle")
-                            .foregroundColor(Color(hex: "FF6B6B"))
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "777777"))
                     }
                     .buttonStyle(.plain)
                     .help("Add files")
                     
                     Button(action: onRename) {
                         Image(systemName: "pencil")
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(hex: "777777"))
                     }
                     .buttonStyle(.plain)
-                    .help("Rename project")
+                    .help("Rename")
                     
                     Button(action: onDelete) {
                         Image(systemName: "trash")
-                            .foregroundColor(.red)
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(hex: "777777"))
                     }
                     .buttonStyle(.plain)
-                    .help("Delete project")
+                    .help("Delete")
                 }
             }
-            .padding()
-            .background(project.isActive ? Color(hex: "FF6B6B").opacity(0.1) : Color.gray.opacity(0.05))
+            .padding(12)
+            .background(
+                project.isActive
+                    ? Color(hex: "FF6B6B").opacity(0.08)
+                    : Color(hex: "252525")
+            )
             .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(
+                        project.isActive
+                            ? Color(hex: "FF6B6B").opacity(0.3)
+                            : Color.clear,
+                        lineWidth: 1
+                    )
+            )
             
             // Files List (when expanded)
             if isExpanded {
                 VStack(alignment: .leading, spacing: 4) {
                     if project.files.isEmpty {
                         Text("No files yet. Click + to add files.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.leading, 44)
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "666666"))
+                            .padding(.leading, 36)
                             .padding(.vertical, 8)
                     } else {
                         ForEach(project.files) { file in
-                            HStack {
+                            HStack(spacing: 8) {
                                 Image(systemName: "doc.text.fill")
+                                    .font(.system(size: 11))
                                     .foregroundColor(Color(hex: "FF6B6B"))
-                                    .font(.caption)
                                 
                                 Text(file.name)
-                                    .font(.subheadline)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(hex: "AAAAAA"))
+                                    .lineLimit(1)
                                 
                                 Spacer()
                                 
-                                Text(file.addedAt, style: .relative)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                
                                 Button(action: { onRemoveFile(file) }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.red)
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .foregroundColor(Color(hex: "666666"))
                                 }
                                 .buttonStyle(.plain)
                             }
-                            .padding(.horizontal, 12)
+                            .padding(.horizontal, 10)
                             .padding(.vertical, 6)
-                            .background(Color.gray.opacity(0.05))
-                            .cornerRadius(6)
+                            .background(Color(hex: "222222"))
+                            .cornerRadius(5)
                         }
                     }
                 }
-                .padding(.leading, 44)
-                .padding(.trailing, 16)
+                .padding(.leading, 36)
+                .padding(.trailing, 12)
+                .padding(.top, 6)
                 .padding(.bottom, 8)
             }
         }
@@ -266,37 +313,71 @@ struct NewProjectSheet: View {
     
     var body: some View {
         VStack(spacing: 20) {
-            Text("Create New Project")
-                .font(.title2)
-                .fontWeight(.bold)
+            VStack(spacing: 8) {
+                Text("New Project")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                
+                Text("Create a project to organize files")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "888888"))
+            }
             
             TextField("Project Name", text: $projectName)
-                .textFieldStyle(.roundedBorder)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .padding(10)
+                .background(Color(hex: "252525"))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                )
                 .frame(width: 300)
             
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 Button("Cancel") {
                     onCancel()
                 }
                 .keyboardShortcut(.escape)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color(hex: "252525"))
+                .foregroundColor(Color(hex: "EAEAEA"))
+                .cornerRadius(6)
+                .buttonStyle(.plain)
                 
                 Button("Create") {
                     onCreate()
                 }
                 .keyboardShortcut(.return)
                 .disabled(projectName.isEmpty)
-                .buttonStyle(.borderedProminent)
-                .tint(Color(hex: "FF6B6B"))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(
+                    Group {
+                        if projectName.isEmpty {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(hex: "333333"))
+                        } else {
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                        }
+                    }
+                )
+                .foregroundColor(.white)
+                .buttonStyle(.plain)
+                .opacity(projectName.isEmpty ? 0.5 : 1.0)
             }
         }
         .padding(30)
         .frame(width: 400)
+        .background(Color(hex: "1A1A1A"))
     }
-}
-
-// MARK: - Color Extension
-
-// MARK: - Preview
-#Preview {
-    LibrarySettingsView()
 }

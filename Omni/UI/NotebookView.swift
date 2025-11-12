@@ -8,145 +8,136 @@ struct NotebookView: View {
     @State private var didCopy = false
     @State private var isSaveHovered = false
     @State private var isCopyHovered = false
+    @State private var isCloseHovered = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Enhanced Header
-            VStack(spacing: 0) {
-                HStack(spacing: 14) {
-                    // Icon with gradient background
-                    ZStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "FF6B6B").opacity(0.2), Color(hex: "FF8E53").opacity(0.1)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 42, height: 42)
-                        
-                        Image(systemName: "doc.text.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(
-                                LinearGradient(
-                                    colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    }
+            // Clean header
+            HStack(spacing: 12) {
+                // Simple icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(Color(hex: "FF6B6B").opacity(0.15))
+                        .frame(width: 36, height: 36)
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Generated Notebook")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundColor(Color(hex: "EAEAEA"))
-                        
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(hex: "FF6B6B"))
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Notebook")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Text("\(wordCount) words · \(characterCount) chars")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "777777"))
+                }
+                
+                Spacer()
+                
+                // Action buttons
+                HStack(spacing: 8) {
+                    // Copy button
+                    Button(action: copyToClipboard) {
                         HStack(spacing: 6) {
-                            Image(systemName: "doc.plaintext")
-                                .font(.system(size: 10))
-                            Text("\(wordCount) words · \(characterCount) characters")
-                                .font(.system(size: 11))
+                            Image(systemName: didCopy ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 12, weight: .medium))
+                            Text(didCopy ? "Copied" : "Copy")
+                                .font(.system(size: 12, weight: .medium))
                         }
-                        .foregroundColor(Color(hex: "8A8A8A"))
+                        .foregroundColor(didCopy ? .green : Color(hex: "EAEAEA"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(isCopyHovered ? Color(hex: "2A2A2A") : Color(hex: "252525"))
+                        )
                     }
-                    
-                    Spacer()
-                    
-                    // Action Buttons
-                    HStack(spacing: 10) {
-                        // Copy Button
-                        Button(action: copyToClipboard) {
-                            HStack(spacing: 6) {
-                                Image(systemName: didCopy ? "checkmark.circle.fill" : "doc.on.doc.fill")
-                                    .font(.system(size: 13))
-                                Text(didCopy ? "Copied!" : "Copy")
-                                    .font(.system(size: 13, weight: .semibold))
-                            }
-                            .foregroundColor(didCopy ? .green : Color(hex: "EAEAEA"))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color(hex: "2A2A2A"))
-                            .cornerRadius(8)
-                            .brightness(isCopyHovered ? 0.1 : 0)
-                        }
-                        .buttonStyle(.plain)
-                        .animation(.easeInOut(duration: 0.2), value: didCopy)
-                        .onHover { hovering in
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                isCopyHovered = hovering
-                            }
-                        }
+                    .buttonStyle(.plain)
+                    .animation(.easeInOut(duration: 0.15), value: didCopy)
+                    .onHover { hovering in
+                        isCopyHovered = hovering
+                    }
 
-                        // Save Button
-                        Button(action: saveNote) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "arrow.down.doc.fill")
-                                    .font(.system(size: 13))
-                                Text("Save")
-                                    .font(.system(size: 13, weight: .semibold))
+                    // Save button
+                    Button(action: saveNote) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.doc")
+                                .font(.system(size: 12, weight: .medium))
+                            Text("Save")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(
+                            Group {
+                                if isSaveHovered {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(hex: "FF6B6B").opacity(0.9), Color(hex: "FF8E53").opacity(0.9)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                } else {
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                }
                             }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovering in
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            isSaveHovered = hovering
+                        }
+                    }
+
+                    // Close button
+                    Button(action: { isShowing = false }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(isCloseHovered ? Color(hex: "AAAAAA") : Color(hex: "666666"))
+                            .frame(width: 28, height: 28)
                             .background(
-                                LinearGradient(
-                                    colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
+                                Circle()
+                                    .fill(isCloseHovered ? Color(hex: "2A2A2A") : Color(hex: "252525"))
                             )
-                            .cornerRadius(8)
-                            .shadow(color: Color(hex: "FF6B6B").opacity(0.3), radius: 8, x: 0, y: 4)
-                            .brightness(isSaveHovered ? 0.1 : 0)
-                        }
-                        .buttonStyle(.plain)
-                        .onHover { hovering in
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                isSaveHovered = hovering
-                            }
-                        }
-
-                        // Close Button
-                        Button(action: { isShowing = false }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(hex: "666666"))
-                        }
-                        .buttonStyle(.plain)
-                        .keyboardShortcut(.escape, modifiers: [])
+                    }
+                    .buttonStyle(.plain)
+                    .keyboardShortcut(.escape, modifiers: [])
+                    .onHover { hovering in
+                        isCloseHovered = hovering
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
             }
-            .background(
-                LinearGradient(
-                    colors: [Color(hex: "242424"), Color(hex: "1E1E1E")],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+            .background(Color(hex: "1A1A1A"))
             
             Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(hex: "FF6B6B").opacity(0.3), Color(hex: "FF8E53").opacity(0.2)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+                .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
 
-            // Text Editor with improved styling
+            // Text editor
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $noteContent)
-                    .font(.system(size: 14, design: .default))
+                    .font(.system(size: 14))
                     .foregroundColor(Color(hex: "EAEAEA"))
                     .scrollContentBackground(.hidden)
                     .padding(20)
                 
-                // Placeholder when empty
+                // Placeholder
                 if noteContent.isEmpty {
                     Text("Your generated notebook will appear here...")
                         .font(.system(size: 14))
@@ -159,46 +150,23 @@ struct NotebookView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(hex: "1A1A1A"))
             
-            // Footer with helpful info
+            // Clean footer
             HStack(spacing: 12) {
                 HStack(spacing: 6) {
-                    Image(systemName: "info.circle.fill")
-                        .font(.system(size: 11))
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 10))
                         .foregroundColor(Color(hex: "666666"))
-                    Text("This notebook is fully editable")
+                    Text("Fully editable")
                         .font(.system(size: 11))
-                        .foregroundColor(Color(hex: "8A8A8A"))
+                        .foregroundColor(Color(hex: "777777"))
                 }
                 
                 Spacer()
                 
-                HStack(spacing: 16) {
-                    HStack(spacing: 4) {
-                        Text("⌘S")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(Color(hex: "666666"))
-                        Text("Save")
-                            .font(.system(size: 11))
-                            .foregroundColor(Color(hex: "8A8A8A"))
-                    }
-                    
-                    HStack(spacing: 4) {
-                        Text("⌘C")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(Color(hex: "666666"))
-                        Text("Copy")
-                            .font(.system(size: 11))
-                            .foregroundColor(Color(hex: "8A8A8A"))
-                    }
-                    
-                    HStack(spacing: 4) {
-                        Text("ESC")
-                            .font(.system(size: 10, design: .monospaced))
-                            .foregroundColor(Color(hex: "666666"))
-                        Text("Close")
-                            .font(.system(size: 11))
-                            .foregroundColor(Color(hex: "8A8A8A"))
-                    }
+                HStack(spacing: 14) {
+                    KeyboardShortcut(key: "⌘S", label: "Save")
+                    KeyboardShortcut(key: "⌘C", label: "Copy")
+                    KeyboardShortcut(key: "ESC", label: "Close")
                 }
             }
             .padding(.horizontal, 20)
@@ -206,7 +174,7 @@ struct NotebookView: View {
             .background(Color(hex: "1E1E1E"))
             .overlay(
                 Rectangle()
-                    .fill(Color(hex: "2F2F2F"))
+                    .fill(Color(hex: "2A2A2A"))
                     .frame(height: 1),
                 alignment: .top
             )
@@ -234,12 +202,12 @@ struct NotebookView: View {
         pasteboard.clearContents()
         pasteboard.setString(noteContent, forType: .string)
         
-        withAnimation(.spring(response: 0.3)) {
+        withAnimation(.easeOut(duration: 0.2)) {
             didCopy = true
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            withAnimation(.spring(response: 0.3)) {
+            withAnimation(.easeOut(duration: 0.2)) {
                 didCopy = false
             }
         }
@@ -272,6 +240,29 @@ struct NotebookView: View {
             } catch {
                 print("Error saving note: \(error.localizedDescription)")
             }
+        }
+    }
+}
+
+// MARK: - Keyboard Shortcut Component
+
+struct KeyboardShortcut: View {
+    let key: String
+    let label: String
+    
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(key)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(Color(hex: "666666"))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Color(hex: "252525"))
+                .cornerRadius(3)
+            
+            Text(label)
+                .font(.system(size: 10))
+                .foregroundColor(Color(hex: "777777"))
         }
     }
 }

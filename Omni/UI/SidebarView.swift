@@ -12,83 +12,113 @@ struct SidebarView: View {
     @State private var renamingSession: ChatSession? = nil
     @State private var renameText: String = ""
     @FocusState private var isRenameFieldFocused: Bool
-    
-    // --- 🛑 NEW: State for modal Settings sheet 🛑 ---
     @State private var isShowingSettings: Bool = false
+    @State private var hoveredSession: ChatSession? = nil
     
     var body: some View {
         VStack(spacing: 0) {
-            // "New Chat" button
-            Button(action: createNewChat) {
-                Label("New Chat", systemImage: "plus")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: "EAEAEA"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .padding()
-            
-            // Divider
-            Rectangle()
-                .fill(Color(hex: "2A2A2A"))
-                .frame(height: 1)
-            
-            // List of chats
-            List(chatSessions, selection: $selectedSession) { session in
-                
-                if renamingSession == session {
-                    TextField("New name", text: $renameText)
-                        .font(.system(size: 13))
-                        .textFieldStyle(.plain)
-                        .focused($isRenameFieldFocused)
-                        .onSubmit { submitRename(session: session) }
-                        .onDisappear { submitRename(session: session) }
-                        .tag(session)
-                } else {
-                    Text(session.title)
-                        .font(.system(size: 13))
-                        .lineLimit(1)
-                        .tag(session)
-                        .contextMenu {
-                            Button {
-                                startRename(session: session)
-                            } label: {
-                                Label("Rename", systemImage: "pencil")
-                            }
-                            
-                            Divider()
-                            
-                            Button(role: .destructive) {
-                                deleteSession(session)
-                            } label: {
-                                Label("Delete Chat", systemImage: "trash")
-                            }
-                        }
+            // Clean header with app branding
+            HStack(spacing: 10) {
+                // Simple, elegant icon
+                ZStack {
+                    RoundedRectangle(cornerRadius: 7)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 28, height: 28)
+                    
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
                 }
+                
+                Text("Omni")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(Color(hex: "EAEAEA"))
+                
+                Spacer()
             }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(Color(hex: "1E1E1E"))
             
-            // --- 🛑 MODIFIED: Settings Button 🛑 ---
-            Spacer() // Pushes the button to the bottom
+            // New Chat button - clean and simple
+            Button(action: createNewChat) {
+                HStack(spacing: 8) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("New Chat")
+                        .font(.system(size: 14, weight: .medium))
+                }
+                .foregroundColor(Color(hex: "EAEAEA"))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color(hex: "2A2A2A"))
+                )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
             
+            // Subtle divider
             Rectangle()
                 .fill(Color(hex: "2A2A2A"))
                 .frame(height: 1)
             
-            // This is now a Button that presents a sheet
+            // Chat list - clean and minimal
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    ForEach(chatSessions) { session in
+                        ChatSessionRow(
+                            session: session,
+                            isSelected: selectedSession == session,
+                            isRenaming: renamingSession == session,
+                            renameText: $renameText,
+                            isRenameFieldFocused: $isRenameFieldFocused,
+                            isHovered: hoveredSession == session,
+                            onSelect: { selectedSession = session },
+                            onRename: { startRename(session: session) },
+                            onDelete: { deleteSession(session) },
+                            onSubmitRename: { submitRename(session: session) }
+                        )
+                        .onHover { hovering in
+                            hoveredSession = hovering ? session : nil
+                        }
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .background(Color(hex: "1E1E1E"))
+            
+            Spacer()
+            
+            // Settings at bottom - clean separator
+            Rectangle()
+                .fill(Color(hex: "2A2A2A"))
+                .frame(height: 1)
+            
             Button(action: { isShowingSettings = true }) {
-                Label("Settings", systemImage: "gear")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(Color(hex: "EAEAEA"))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 10) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 14))
+                    Text("Settings")
+                        .font(.system(size: 14, weight: .medium))
+                    Spacer()
+                }
+                .foregroundColor(Color(hex: "AAAAAA"))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
             }
             .buttonStyle(.plain)
-            .padding()
-            // --- 🛑 END OF MODIFICATION 🛑 ---
+            .background(Color(hex: "1E1E1E"))
         }
         .background(Color(hex: "1E1E1E"))
-        // This sheet presents the SettingsView modally
         .sheet(isPresented: $isShowingSettings) {
             SettingsView()
         }
@@ -106,7 +136,6 @@ struct SidebarView: View {
         newSession.messages.append(welcomeMessage)
         
         try? modelContext.save()
-        
         selectedSession = newSession
     }
     
@@ -137,5 +166,125 @@ struct SidebarView: View {
         
         renamingSession = nil
         renameText = ""
+    }
+}
+
+// MARK: - Chat Session Row
+
+struct ChatSessionRow: View {
+    let session: ChatSession
+    let isSelected: Bool
+    let isRenaming: Bool
+    @Binding var renameText: String
+    var isRenameFieldFocused: FocusState<Bool>.Binding
+    let isHovered: Bool
+    let onSelect: () -> Void
+    let onRename: () -> Void
+    let onDelete: () -> Void
+    let onSubmitRename: () -> Void
+    
+    var body: some View {
+        Group {
+            if isRenaming {
+                // Rename field with subtle accent
+                HStack(spacing: 8) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "FF6B6B"))
+                    
+                    TextField("Chat name", text: $renameText)
+                        .font(.system(size: 13))
+                        .textFieldStyle(.plain)
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                        .focused(isRenameFieldFocused)
+                        .onSubmit(onSubmitRename)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(hex: "252525"))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(hex: "FF6B6B").opacity(0.5), lineWidth: 1)
+                        )
+                )
+                .padding(.horizontal, 8)
+            } else {
+                // Regular chat item
+                Button(action: onSelect) {
+                    HStack(spacing: 10) {
+                        Image(systemName: session.messages.isEmpty ? "bubble.left" : "bubble.left.fill")
+                            .font(.system(size: 13))
+                            .foregroundColor(
+                                isSelected ? Color(hex: "FF6B6B") : Color(hex: "666666")
+                            )
+                        
+                        Text(session.title)
+                            .font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                            .foregroundColor(
+                                isSelected ? Color(hex: "EAEAEA") : Color(hex: "AAAAAA")
+                            )
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        
+                        // Show 3-dot menu on hover
+                        if isHovered {
+                            Menu {
+                                Button(action: onRename) {
+                                    Label("Rename", systemImage: "pencil")
+                                }
+                                
+                                Divider()
+                                
+                                Button(role: .destructive, action: onDelete) {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(hex: "666666"))
+                                    .frame(width: 20, height: 20)
+                            }
+                            .menuIndicator(.hidden)
+                            .menuStyle(.borderlessButton)
+                            .transition(.opacity)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(
+                                isSelected
+                                    ? Color(hex: "252525")
+                                    : (isHovered ? Color(hex: "232323") : Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(
+                                        isSelected ? Color(hex: "FF6B6B").opacity(0.3) : Color.clear,
+                                        lineWidth: 1
+                                    )
+                            )
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 8)
+                .contextMenu {
+                    Button(action: onRename) {
+                        Label("Rename", systemImage: "pencil")
+                    }
+                    
+                    Divider()
+                    
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
+                }
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
     }
 }

@@ -14,7 +14,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     let modelContainer: ModelContainer
     
-    var hasCompletedSetup: Bool = false
+    @AppStorage("hasCompletedSetup") var hasCompletedSetup: Bool = false
     
     override init() {
         do {
