@@ -30,7 +30,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // 1. Initialize core components
         fileIndexer = FileIndexer(modelContainer: modelContainer)
         panelController = OmniPanelController(modelContainer: modelContainer,
-                                              fileIndexer: fileIndexer!)
+                                                fileIndexer: fileIndexer!)
         
         if !hasCompletedSetup {
             launchSetupWizard()
@@ -39,8 +39,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             NSApp.setActivationPolicy(.accessory)
         }
         
-        // Request accessibility permissions for text capture
-        requestAccessibilityPermissions()
+        // --- REMOVED ---
+        // We removed `requestAccessibilityPermissions()` from here.
+        // SetupView now handles this in a much better way.
     }
     
     /// This function shows the SetupView in its own window.
@@ -96,7 +97,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     /// This function is called by the 'Finish Setup' button
     func setupDidComplete() {
-        setupWindow?.close()
+        setupWindow?.close() // This already closes the window
         setupWindow = nil
         launchMenuBarApp()
         
@@ -107,19 +108,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
+    // --- ADD THIS FUNCTION ---
+    /// Public function to allow the SetupView to close its own window.
+    func closeSetupWindow() {
+        setupWindow?.close()
+        setupWindow = nil
+    }
+    // --- END ADDITION ---
+    
     // Prevents app from quitting when setup window is closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
         return !hasCompletedSetup
     }
     
-    // NEW: Request accessibility permissions
-    private func requestAccessibilityPermissions() {
-        let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true]
-        let accessEnabled = AXIsProcessTrustedWithOptions(options)
-        
-        if !accessEnabled {
-            print("⚠️ Accessibility permissions required for text capture hotkey functionality")
-        }
-    }
+    // --- REMOVED ---
+    // The `requestAccessibilityPermissions()` function was here,
+    // but it is no longer needed as SetupView handles it.
 }

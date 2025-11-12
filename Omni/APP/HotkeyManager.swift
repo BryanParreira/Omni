@@ -8,14 +8,12 @@ class HotkeyManager {
     
     // Stored references for our hotkeys
     private var panelToggleHotKeyRef: EventHotKeyRef?
-    private var textCaptureHotKeyRef: EventHotKeyRef?
     
     // ONE shared event handler
     private var eventHandler: EventHandlerRef?
     
     // Define your hotkeys
     private let panelToggleHotKeyID = EventHotKeyID(signature: FourCharCode("omni".fourCharCodeValue), id: 1)
-    private let textCaptureHotKeyID = EventHotKeyID(signature: FourCharCode("omnt".fourCharCodeValue), id: 2)
     
     init(panelController: OmniPanelController?) {
         self.panelController = panelController
@@ -27,7 +25,7 @@ class HotkeyManager {
         let panelKeyCode = UInt32(kVK_Space)
         let panelModifiers = UInt32(optionKey) // Option+Space
         
-        var status = RegisterEventHotKey(
+        let status = RegisterEventHotKey(
             panelKeyCode,
             panelModifiers,
             panelToggleHotKeyID,
@@ -42,26 +40,7 @@ class HotkeyManager {
             print("✅ Panel toggle hotkey registered.")
         }
 
-        // --- 2. Register Text Capture Hotkey ---
-        let captureKeyCode = UInt32(kVK_ANSI_X) // "X" key
-        let captureModifiers = UInt32(cmdKey | optionKey) // Cmd+Option+X
-        
-        status = RegisterEventHotKey(
-            captureKeyCode,
-            captureModifiers,
-            textCaptureHotKeyID,
-            GetEventDispatcherTarget(),
-            0,
-            &textCaptureHotKeyRef // Store the reference
-        )
-        
-        if status != noErr {
-            print("❌ ERROR: Failed to register text capture hotkey (Cmd+Opt+X). Status: \(status)")
-        } else {
-            print("✅ Text capture hotkey registered.")
-        }
-        
-        // --- 3. Install ONE handler for BOTH ---
+        // --- 2. Install ONE handler ---
         installSharedEventHandler()
     }
     
@@ -94,20 +73,6 @@ class HotkeyManager {
             case manager.panelToggleHotKeyID.id:
                 print("🔥 Panel toggle hotkey pressed!")
                 manager.panelController?.toggle()
-                
-            case manager.textCaptureHotKeyID.id:
-                print("🔥 Text capture hotkey pressed!")
-                
-                guard let selectedText = HotkeyHelper.shared.captureSelectedText() else {
-                    print("⚠️ No text selected")
-                    return noErr
-                }
-                
-                print("📋 Captured text: \(selectedText.prefix(50))...")
-                
-                Task { @MainActor in
-                    manager.panelController?.handleCapturedText(selectedText)
-                }
                 
             default:
                 break
@@ -145,11 +110,6 @@ class HotkeyManager {
             if let hotKeyRef = self.panelToggleHotKeyRef {
                 UnregisterEventHotKey(hotKeyRef)
                 self.panelToggleHotKeyRef = nil
-            }
-            
-            if let hotKeyRef = self.textCaptureHotKeyRef {
-                UnregisterEventHotKey(hotKeyRef)
-                self.textCaptureHotKeyRef = nil
             }
             
             print("⌨️ All hotkeys and handlers unregistered.")

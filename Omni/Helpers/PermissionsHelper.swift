@@ -1,50 +1,31 @@
 import Foundation
-import AppKit
+import ApplicationServices // <-- ADD THIS IMPORT
 
-/// This helper struct manages and requests system-level permissions.
-struct PermissionsHelper {
-    
-    // --- ACCESSIBILITY ---
-    
+class PermissionsHelper {
+
+    // ... your other existing functions (e.g., for Keychain) ...
+
+    // MARK: - Accessibility Permissions -
+    // ADD THE TWO FUNCTIONS BELOW
+
     /**
-     Checks if the app has already been granted Accessibility permissions.
+     Checks if the user has already granted Accessibility permission.
      - Returns: `true` if permission is granted, `false` otherwise.
      */
-    static func isAccessibilityGranted() -> Bool {
-        // This is the "no-prompt" way to check the status.
-        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
-        let options: [CFString: Any] = [promptKey: false]
+    static func checkAccessibilityPermission() -> Bool {
+        // This checks the status *without* showing a prompt.
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false]
         return AXIsProcessTrustedWithOptions(options as CFDictionary)
     }
-    
+
     /**
-     Checks for Accessibility permissions. If not granted, it will
-     trigger the system prompt for the user.
+     Requests Accessibility permission from the user.
+     This will show the system pop-up *if* permission hasn't been asked for.
+     You should call this from a button in your SettingsView.
      */
-    static func checkAndRequestAccessibility() {
-        // This is the "prompt" way to check.
-        let promptKey = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
-        let options: [CFString: Any] = [promptKey: true]
-        let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
-    }
-    
-    /**
-     An alert to show the user if they try to use a feature
-     without having granted the Accessibility permission.
-     */
-    static func showAccessibilityAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Enable Accessibility for Omni"
-        alert.informativeText = "Omni needs Accessibility permissions to read text from your screen. This permission is required to capture your current context.\n\nPlease go to System Settings > Privacy & Security > Accessibility and enable Omni."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "OK")
-        
-        if alert.runModal() == .alertFirstButtonReturn {
-            // This URL opens the exact correct settings pane
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
-            }
-        }
+    static func requestAccessibilityPermission() {
+        // Setting the prompt option to true will show the system pop-up.
+        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true]
+        _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
     }
 }

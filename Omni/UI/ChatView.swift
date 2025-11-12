@@ -36,155 +36,9 @@ struct ChatView: View {
             ).ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // MARK: Chat Area
-                ScrollViewReader { proxy in
-                    ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 16) {
-                            ForEach(sortedMessages) { message in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    MessageBubbleView(message: message)
-                                        .id(message.id)
-                                    
-                                    // AI Suggested Action button logic has been removed
-                                }
-                                .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
-                            }
-                            
-                            // This is the 3-dot loading animation
-                            if viewModel.isLoading {
-                                HStack(alignment: .top, spacing: 12) {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack(spacing: 6) {
-                                            ForEach(0..<3) { index in
-                                                Circle()
-                                                    .fill(Color(hex: "8A8A8A"))
-                                                    .frame(width: 6, height: 6)
-                                                    .scaleEffect(isAnimatingDots ? 1.0 : 0.5)
-                                                    .opacity(isAnimatingDots ? 1.0 : 0.5)
-                                                    .animation(
-                                                        Animation.easeInOut(duration: 0.6)
-                                                            .repeatForever()
-                                                            .delay(Double(index) * 0.2),
-                                                        value: isAnimatingDots
-                                                    )
-                                            }
-                                        }
-                                        .padding(.horizontal, 14)
-                                        .padding(.vertical, 10)
-                                        .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "242424")).overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "2F2F2F"), lineWidth: 1)))
-                                    }
-                                    Spacer(minLength: 100)
-                                }
-                                .onAppear { isAnimatingDots = true }
-                                .onDisappear { isAnimatingDots = false }
-                                .transition(.scale.combined(with: .opacity))
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                    }
-                    .contextMenu {
-                        Button(role: .destructive, action: {
-                            viewModel.clearChat()
-                        }) {
-                            Label("Clear Chat", systemImage: "trash")
-                        }
-                    }
-                    .onChange(of: session.messages.count) { _, _ in
-                        if let lastMessage = sortedMessages.last {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                    .onChange(of: session.id) {
-                        if let lastMessage = sortedMessages.last {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        }
-                    }
-                }
-                
-                // MARK: File Pills
-                if shouldShowFilePills {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(viewModel.currentSession.attachedFileURLs, id: \.self) { url in
-                                FilePillView(url: url) {
-                                    viewModel.removeAttachment(url: url)
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                    }
-                    .background(Color(hex: "242424"))
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-                
-                // MARK: Input Area
-                VStack(spacing: 0) {
-                    Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
-                    HStack(spacing: 12) {
-                        Button(action: { presentFilePicker() }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(Color(hex: "666666"))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Attach files")
-                        
-                        // --- 🛑 "GLOWING" BRAIN BUTTON (Restored) 🛑 ---
-                        Button(action: {
-                            viewModel.useGlobalLibrary.toggle()
-                        }) {
-                            Image(systemName: "brain")
-                                .font(.system(size: 18)) // Slightly smaller than 'plus' for balance
-                                .foregroundColor(viewModel.useGlobalLibrary ? Color(hex: "FF6B6B") : Color(hex: "666666"))
-                                // The "Glow" Effect
-                                .shadow(
-                                    color: viewModel.useGlobalLibrary ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
-                                    radius: viewModel.useGlobalLibrary ? 6 : 0,
-                                    x: 0, y: 0
-                                )
-                                .animation(.easeInOut(duration: 0.2), value: viewModel.useGlobalLibrary)
-                        }
-                        .buttonStyle(.plain)
-                        .help(viewModel.useGlobalLibrary ? "Stop using Global Library" : "Include Global Library in context")
-                        // --- 🛑 END OF BUTTON 🛑 ---
-                        
-                        HStack(spacing: 8) {
-                            Image(systemName: "text.cursor")
-                                .font(.system(size: 13))
-                                .foregroundColor(Color(hex: "666666"))
-                            
-                            TextField("", text: $viewModel.inputText, prompt: Text("Ask a question or paste a URL...").foregroundColor(Color(hex: "666666")))
-                                .textFieldStyle(.plain)
-                                .font(.system(size: 14))
-                                .foregroundColor(Color(hex: "EAEAEA"))
-                                .focused($isInputFocused)
-                                .onSubmit { withAnimation { viewModel.sendMessage() } }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "242424")))
-                        
-                        if !viewModel.inputText.isEmpty {
-                            Button(action: { withAnimation { viewModel.sendMessage() } }) {
-                                Image(systemName: "arrow.up")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(width: 32, height: 32)
-                                    .background(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                    .clipShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                            .transition(.scale.combined(with: .opacity))
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color(hex: "1A1A1A"))
-                }
+                chatArea
+                filePillsArea
+                inputArea
             }
             
             if isDropTarget {
@@ -250,6 +104,168 @@ struct ChatView: View {
     // MARK: - View Builders
     
     @ViewBuilder
+    private var chatArea: some View {
+        // --- 🛑 FIX: The .onChange modifiers are moved INSIDE this closure ---
+        ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 16) {
+                    ForEach(sortedMessages) { message in
+                        VStack(alignment: .leading, spacing: 8) {
+                            MessageBubbleView(message: message)
+                                .id(message.id)
+                        }
+                        .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
+                    }
+                    
+                    // This is the 3-dot loading animation
+                    if viewModel.isLoading {
+                        // --- 🛑 FIX: Modifiers moved onto the Group ---
+                        Group {
+                            // --- MODIFICATION: WRAPPED IN HSTACK + SPACER TO ALIGN LEFT ---
+                            HStack {
+                                HStack(alignment: .top, spacing: 12) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack(spacing: 6) {
+                                            ForEach(0..<3) { index in
+                                                Circle()
+                                                    .fill(Color(hex: "8A8A8A"))
+                                                    .frame(width: 6, height: 6)
+                                                    .scaleEffect(isAnimatingDots ? 1.0 : 0.5)
+                                                    .opacity(isAnimatingDots ? 1.0 : 0.5)
+                                                    .animation(
+                                                        Animation.easeInOut(duration: 0.6)
+                                                            .repeatForever()
+                                                            .delay(Double(index) * 0.2),
+                                                        value: isAnimatingDots
+                                                    )
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(RoundedRectangle(cornerRadius: 10).fill(Color(hex: "242424")).overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(hex: "2F2F2F"), lineWidth: 1)))
+                                .onAppear { isAnimatingDots = true }
+                                .onDisappear { isAnimatingDots = false }
+                                .transition(.scale.combined(with: .opacity))
+                                
+                                Spacer() // <-- THIS PUSHES THE BUBBLE LEFT
+                            }
+                            
+                            Spacer(minLength: 100)
+                        }
+                    }
+                }
+                .padding(.vertical, 16) // Added vertical padding
+            }
+            .padding(.horizontal, 20)
+            .contextMenu {
+                Button(role: .destructive, action: {
+                    viewModel.clearChat()
+                }) {
+                    Label("Clear Chat", systemImage: "trash")
+                }
+            }
+            // --- 🛑 FIX: .onChange modifiers moved here, attached to ScrollView ---
+            .onChange(of: session.messages.count) { _, _ in
+                if let lastMessage = sortedMessages.last {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
+            }
+            .onChange(of: session.id) {
+                if let lastMessage = sortedMessages.last {
+                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                }
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var filePillsArea: some View {
+        if shouldShowFilePills {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(viewModel.currentSession.attachedFileURLs, id: \.self) { url in
+                        FilePillView(url: url) {
+                            viewModel.removeAttachment(url: url)
+                        }
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+            }
+            .background(Color(hex: "242424"))
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+    
+    @ViewBuilder
+    private var inputArea: some View {
+        VStack(spacing: 0) {
+            Rectangle().fill(Color(hex: "2A2A2A")).frame(height: 1)
+            HStack(spacing: 12) {
+                Button(action: { presentFilePicker() }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(hex: "666666"))
+                }
+                .buttonStyle(.plain)
+                .help("Attach files")
+                
+                Button(action: {
+                    viewModel.useGlobalLibrary.toggle()
+                }) {
+                    Image(systemName: "brain")
+                        .font(.system(size: 18))
+                        .foregroundColor(viewModel.useGlobalLibrary ? Color(hex: "FF6B6B") : Color(hex: "666666"))
+                        .shadow(
+                            color: viewModel.useGlobalLibrary ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
+                            radius: viewModel.useGlobalLibrary ? 6 : 0,
+                            x: 0, y: 0
+                        )
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.useGlobalLibrary)
+                }
+                .buttonStyle(.plain)
+                .help(viewModel.useGlobalLibrary ? "Stop using Global Library" : "Include Global Library in context")
+                
+                HStack(spacing: 8) {
+                    Image(systemName: "text.cursor")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(hex: "666666"))
+                    
+                    TextField("", text: $viewModel.inputText, prompt: Text("Ask a question or paste a URL...").foregroundColor(Color(hex: "666666")))
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                        .focused($isInputFocused)
+                        .onSubmit { withAnimation { viewModel.sendMessage() } }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "242424")))
+                
+                if !viewModel.inputText.isEmpty {
+                    Button(action: { withAnimation { viewModel.sendMessage() } }) {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(LinearGradient(colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .transition(.scale.combined(with: .opacity))
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(hex: "1A1A1a"))
+        }
+    }
+    
+    @ViewBuilder
     private func dropOverlay() -> some View {
         ZStack {
             Color.black.opacity(0.6)
@@ -282,7 +298,9 @@ struct ChatView: View {
         openPanel.canChooseDirectories = false
         openPanel.allowsMultipleSelection = true
         
-        if let window = NSApp.keyWindow {
+        let windowToPresentOn = NSApp.keyWindow ?? NSApp.mainWindow
+        
+        if let window = windowToPresentOn {
             openPanel.beginSheetModal(for: window) { (result) in
                 if result == .OK {
                     var urlsToAttach: [URL] = []
@@ -293,10 +311,12 @@ struct ChatView: View {
                     }
                     
                     if !urlsToAttach.isEmpty {
-                         viewModel.addAttachedFiles(urls: urlsToAttach)
+                        viewModel.addAttachedFiles(urls: urlsToAttach)
                     }
                 }
             }
+        } else {
+            print("❌ ERROR: Could not find a window to present the file picker.")
         }
     }
 }

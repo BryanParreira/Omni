@@ -9,6 +9,10 @@ private struct SettingsKeys {
     static let openAIKey = "openai_api_key"
     static let anthropicKey = "anthropic_api_key"
     static let geminiKey = "gemini_api_key"
+    
+    // *** NEW ***
+    // Add the key for the selected local model
+    static let selectedLocalModel = "selected_model"
 }
 
 private let brandGradient = LinearGradient(
@@ -123,8 +127,50 @@ private struct AIChoiceCard: View {
     }
 }
 
-// MARK: - Animated Mock Views
+// Helper View for Permission Rows
+private struct PermissionRow: View {
+    let title: String
+    let description: String
+    let icon: String
+    let hasPermission: Bool
+    let grantAction: () -> Void
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 15) {
+            Image(systemName: icon)
+                .font(.title)
+                .foregroundStyle(brandGradient)
+                .frame(width: 30)
+                .padding(.top, 3)
+            
+            VStack(alignment: .leading, spacing: 5) {
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(description)
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer()
+            
+            if hasPermission {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.title)
+                    .foregroundColor(.green)
+                    .transition(.scale.combined(with: .opacity))
+            } else {
+                Button("Grant", action: grantAction)
+                    .buttonStyle(SecondaryButtonStyle())
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: hasPermission)
+    }
+}
 
+// MARK: - Animated Mock Views
+// ... (All Animated Mock Views are unchanged) ...
 // Mockup for Welcome Page (Chat Demo)
 private struct AnimatedChatMock: View {
     @State private var showFile = false
@@ -490,12 +536,23 @@ struct SetupView: View {
     @AppStorage(SettingsKeys.geminiKey) private var geminiKey: String = ""
     @AppStorage(SettingsKeys.selectedProvider) private var selectedProvider: String = "cloud"
     
+    // *** NEW ***
+    // Use @AppStorage to bind directly to the saved model in UserDefaults
+    @AppStorage(SettingsKeys.selectedLocalModel) private var selectedOllamaModel: String = ""
+    
     @State private var currentPage = 1
-    @State private var isGrantingAccess = false
     @State private var showingSettingsAlert = false
     
     @State private var cloudProvider: String = "openai"
     @State private var currentApiKey: String = ""
+    
+    @State private var hasAccessibilityPermission: Bool = false
+    @State private var hasGrantedFullDiskAccess: Bool = false // This is a proxy
+    
+    // *** NEW *** State for Ollama model list
+    @State private var ollamaModels: [OllamaModel] = []
+    @State private var ollamaFetchError: String? = nil
+    @State private var isFetchingModels: Bool = false
     
     var body: some View {
         VStack(spacing: 0) {
@@ -523,12 +580,13 @@ struct SetupView: View {
         .background(Color(hex: "1A1A1A"))
         .foregroundColor(.white)
         .cornerRadius(15)
-        .alert(isPresented: $showingSettingsAlert) {
-            Alert(
-                title: Text("Full Disk Access Required"),
-                message: Text("Please grant Omni 'Full Disk Access' in System Settings to enable file analysis. You might need to drag Omni into the list manually."),
-                dismissButton: .default(Text("Got It"))
-            )
+        .alert("Grant Full Disk Access", isPresented: $showingSettingsAlert) {
+            Button("Got It") {
+                // Assume the user did it to enable the Finish button.
+                hasGrantedFullDiskAccess = true
+            }
+        } message: {
+            Text("Please grant Omni 'Full Disk Access' in System Settings to enable file analysis. You may need to drag Omni into the list manually.")
         }
     }
     
@@ -590,7 +648,14 @@ struct SetupView: View {
             
             Spacer()
             
-            let isDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
+            // --- *** UPDATED *** Disability Logic ---
+            let isPage3CloudDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
+            // Disable if local is selected but no model is chosen
+            let isPage3LocalDisabled = (currentPage == 3 && selectedProvider == "local" && selectedOllamaModel.isEmpty)
+            let isPage4Disabled = (currentPage == 4 && (!hasAccessibilityPermission || !hasGrantedFullDiskAccess))
+            
+            let isDisabled = isPage3CloudDisabled || isPage3LocalDisabled || isPage4Disabled
+            // --- End Update ---
             
             if currentPage < 4 {
                 Button(action: {
@@ -606,7 +671,8 @@ struct SetupView: View {
                 }) {
                     Label("Finish Setup", systemImage: "sparkles")
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(PrimaryButtonStyle(isDisabled: isDisabled))
+                .disabled(isDisabled)
             }
         }
         .padding(20)
@@ -629,7 +695,6 @@ struct SetupView: View {
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.horizontal, 60)
             
-            // The "wow" animation is now the first thing they see
             AnimatedChatMock()
             
             Spacer()
@@ -637,7 +702,6 @@ struct SetupView: View {
         .padding(40)
     }
     
-    // --- 🛑 REDESIGNED: Features Page (With NEW Animations) 🛑 ---
     private var featuresPage: some View {
         ScrollView {
             VStack(alignment: .center, spacing: 30) {
@@ -651,7 +715,6 @@ struct SetupView: View {
                     .foregroundColor(Color(hex: "AAAAAA"))
                     .padding(.bottom, 10)
 
-                // Grid of new animations
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
                     
                     VStack(alignment: .leading, spacing: 10) {
@@ -683,7 +746,6 @@ struct SetupView: View {
                             .font(.headline)
                             .foregroundColor(Color(hex: "EAEAEA"))
                             .padding(.leading, 5)
-                        // Placeholder for Hotkey
                         VStack(spacing: 15) {
                             Image(systemName: "keyboard.option")
                                 .font(.system(size: 30))
@@ -748,10 +810,12 @@ struct SetupView: View {
                 ) {
                     selectedProvider = "local"
                     currentApiKey = ""
+                    // *** NEW *** Fetch models when user clicks
+                    fetchOllamaModels()
                 }
                 
                 if selectedProvider == "local" {
-                    localProviderSetup
+                    localProviderSetup // This view is now updated
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
@@ -802,12 +866,55 @@ struct SetupView: View {
         .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
     
+    // --- *** UPDATED *** localProviderSetup ---
     private var localProviderSetup: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Setup Ollama (Local LLM Engine):")
+            Text("Ollama Configuration:")
                 .font(.headline)
                 .foregroundColor(Color(hex: "EAEAEA"))
             
+            // --- *** NEW *** Model Picker Section ---
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Select Installed Model:")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "EAEAEA"))
+
+                if isFetchingModels {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("Fetching models...")
+                            .font(.caption)
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                    }
+                } else if let error = ollamaFetchError {
+                    Text("Error: \(error)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                } else if ollamaModels.isEmpty {
+                    Text("No models found. Make sure Ollama is running and you have downloaded a model (e.g., `ollama run llama3.1`).")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                } else {
+                    // We have models, show the picker
+                    Picker("Model", selection: $selectedOllamaModel) {
+                        Text("Select a model...").tag("")
+                        ForEach(ollamaModels, id: \.name) { model in
+                            Text(model.name).tag(model.name)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    // No need for .onChange, @AppStorage handles saving
+                }
+            }
+            .padding(.bottom, 10)
+            // --- End Model Picker Section ---
+
+            Text("How to get more models:")
+                .font(.subheadline)
+                .foregroundColor(Color(hex: "EAEAEA"))
+
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     Text("1.")
@@ -829,10 +936,6 @@ struct SetupView: View {
                     .background(Color(hex: "1F1F1F"))
                     .cornerRadius(8)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "3A3A3A")))
-                
-                Text("Omni will automatically detect your installed Ollama models.")
-                    .font(.caption)
-                    .foregroundColor(Color(hex: "8A8A8A"))
             }
             .font(.subheadline)
             .foregroundColor(Color(hex: "AAAAAA"))
@@ -841,89 +944,137 @@ struct SetupView: View {
         .background(Color(hex: "242424"))
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
+        .onAppear {
+            // Fetch models when this view appears
+            fetchOllamaModels()
+        }
     }
     
-    // --- Permissions Page (with "Wow" Animation) ---
+    // --- *** UPDATED *** Permissions Page ---
     private var permissionsPage: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Grant Full Disk Access")
+            Text("Grant Permissions")
                 .font(.largeTitle)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
             
-            Text("Omni needs this to find and read your files. Your files and their content **never** leave your Mac.")
+            Text("Omni needs two key permissions to unlock its full potential. Your data **never** leaves your Mac.")
                 .font(.title3)
                 .foregroundColor(Color(hex: "AAAAAA"))
                 .padding(.bottom, 10)
             
             // --- Visual Guide ---
-            VStack(alignment: .leading, spacing: 20) {
-                HStack(alignment: .top) {
-                    Image(systemName: "lock.shield.fill")
-                        .font(.title)
-                        .foregroundStyle(brandGradient)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text("Your Privacy is Paramount")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                        Text("Omni is a **local-first** app. This permission is only for reading your files locally. Your data never leaves your device.")
-                            .font(.subheadline)
-                            .foregroundColor(Color(hex: "AAAAAA"))
-                            .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 25) { // Added more spacing
+                
+                // --- 1. ACCESSIBILITY PERMISSION ROW ---
+                PermissionRow(
+                    title: "Accessibility",
+                    description: "Required to capture selected text with your hotkey (Cmd+Opt+X).",
+                    icon: "hand.cursor.fill",
+                    hasPermission: hasAccessibilityPermission,
+                    grantAction: {
+                        PermissionsHelper.requestAccessibilityPermission()
+                        // Re-check permission after a moment
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            checkAllPermissions()
+                        }
                     }
-                }
+                )
                 
                 Divider().background(Color(hex: "3A3A3A"))
-
-                Text("How to Grant Access")
-                    .font(.headline)
-                    .foregroundColor(.white)
                 
-                // Animated Mock UI
-                HStack(spacing: 20) {
-                    // Step 1: Button
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("STEP 1")
-                            .font(.caption)
-                            .foregroundColor(Color(hex: "AAAAAA"))
-                        Button(action: {
-                            isGrantingAccess = true
-                            openFullDiskAccessSettings()
-                            showingSettingsAlert = true
-                        }) {
-                            Label(isGrantingAccess ? "Opening..." : "Open Settings", systemImage: "gearshape.fill")
-                        }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .disabled(isGrantingAccess)
+                // --- 2. FULL DISK ACCESS ROW ---
+                PermissionRow(
+                    title: "Full Disk Access",
+                    description: "Required to find, read, and index your local files for analysis.",
+                    icon: "folder.fill.badge.person.crop",
+                    hasPermission: hasGrantedFullDiskAccess,
+                    grantAction: {
+                        openFullDiskAccessSettings()
+                        showingSettingsAlert = true
                     }
-                    
-                    Image(systemName: "arrow.right")
-                        .font(.title)
-                        .foregroundColor(Color(hex: "4A4A4A"))
-                    
-                    // Step 2 & 3: Visual Demo
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("STEP 2 & 3")
-                            .font(.caption)
-                            .foregroundColor(Color(hex: "AAAAAA"))
-                        
-                        // Animated mock UI
-                        MockSettingsToggleView()
-                    }
-                }
-                
+                )
             }
             .padding(25)
             .background(Color(hex: "242424"))
             .cornerRadius(12)
             .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
             
+            // --- Animated Mock ---
+            Text("How to Grant Access")
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.top, 10)
+            
+            Text("1. Click \"Grant\" to open System Settings.\n2. Find Omni in the list.\n3. Turn the toggle ON.")
+                .font(.subheadline)
+                .foregroundColor(Color(hex: "AAAAAA"))
+                .fixedSize(horizontal: false, vertical: true)
+            
+            MockSettingsToggleView()
+                .frame(maxWidth: .infinity, alignment: .center)
+            
             Spacer()
         }
         .padding(40)
+        .onAppear {
+            // Check permissions every time this page appears
+            checkAllPermissions()
+        }
+        // Re-check when the app becomes active, in case the user
+        // comes back from System Settings
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
+            checkAllPermissions()
+        }
     }
     
     // MARK: - Helper Functions
+    
+    // *** NEW *** Checks all required permissions
+    private func checkAllPermissions() {
+        self.hasAccessibilityPermission = PermissionsHelper.checkAccessibilityPermission()
+        // We can't *programmatically* check Full Disk Access.
+        // We set `hasGrantedFullDiskAccess` to true when the user
+        // dismisses the "Got It" alert.
+    }
+    
+    // *** NEW *** Function to fetch Ollama models
+    private func fetchOllamaModels() {
+        guard !isFetchingModels else { return }
+        print("Fetching Ollama models...")
+        isFetchingModels = true
+        ollamaFetchError = nil
+        
+        Task {
+            do {
+                let models = try await LocalLLMRunner.shared.fetchInstalledModels()
+                
+                await MainActor.run {
+                    self.ollamaModels = models
+                    self.isFetchingModels = false
+                    print("Found models: \(models.map { $0.name })")
+                    
+                    // Set the picker to the saved value, if it exists in the list
+                    let savedModel = UserDefaults.standard.string(forKey: SettingsKeys.selectedLocalModel) ?? ""
+                    if models.first(where: { $0.name == savedModel }) != nil {
+                        self.selectedOllamaModel = savedModel
+                    } else if let firstModel = models.first {
+                        // If no valid model is saved, select the first one
+                        self.selectedOllamaModel = firstModel.name
+                    } else {
+                        self.selectedOllamaModel = "" // No models installed
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    print("Error fetching models: \(error.localizedDescription)")
+                    self.ollamaFetchError = "Could not connect to Ollama. Is it running?"
+                    self.isFetchingModels = false
+                    self.ollamaModels = []
+                }
+            }
+        }
+    }
     
     private var apiKeyURL: URL {
         switch cloudProvider {
@@ -967,7 +1118,10 @@ struct SetupView: View {
                 }
                 UserDefaults.standard.set(cloudProvider, forKey: SettingsKeys.selectedProvider)
             } else {
+                // Save local provider and the selected model
                 UserDefaults.standard.set("local", forKey: SettingsKeys.selectedProvider)
+                // @AppStorage already saved the model, but this is good for clarity.
+                UserDefaults.standard.set(selectedOllamaModel, forKey: SettingsKeys.selectedLocalModel)
             }
         }
         
@@ -981,16 +1135,16 @@ struct SetupView: View {
     }
     
     private func completeSetup() {
-        if currentPage == 4 {
-             handleNext()
-        }
-        
+        // 1. You set the flag (perfect!)
         hasCompletedSetup = true
         
+        // 2. You find the AppDelegate (perfect!)
         if let appDelegate = NSApp.delegate as? AppDelegate {
+            // 3. You call the correct function (perfect!)
             appDelegate.setupDidComplete()
         }
         
-        NSApp.keyWindow?.close()
+        // 4. You close this window (perfect!)
+        (NSApp.delegate as? AppDelegate)?.closeSetupWindow()
     }
 }
