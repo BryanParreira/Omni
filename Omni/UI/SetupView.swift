@@ -9,9 +9,6 @@ private struct SettingsKeys {
     static let openAIKey = "openai_api_key"
     static let anthropicKey = "anthropic_api_key"
     static let geminiKey = "gemini_api_key"
-    
-    // *** NEW ***
-    // Add the key for the selected local model
     static let selectedLocalModel = "selected_model"
 }
 
@@ -21,157 +18,247 @@ private let brandGradient = LinearGradient(
     endPoint: .bottomTrailing
 )
 
-// A custom button style for primary actions
-private struct PrimaryButtonStyle: ButtonStyle {
-    var isDisabled: Bool = false
+// MARK: - Premium Button Styles
 
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(.white)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 25)
-            .background(brandGradient)
-            .cornerRadius(12)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(isDisabled ? 0.5 : (configuration.isPressed ? 0.9 : 1.0))
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
-    }
-}
-
-// A custom button style for secondary actions
-private struct SecondaryButtonStyle: ButtonStyle {
+private struct PremiumPrimaryButton: ButtonStyle {
     var isDisabled: Bool = false
+    @State private var isHovered = false
     
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(Color(hex: "EAEAEA"))
-            .padding(.vertical, 12)
-            .padding(.horizontal, 25)
-            .background(Color(hex: "2F2F2F"))
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.vertical, 14)
+            .padding(.horizontal, 28)
+            .background(
+                ZStack {
+                    brandGradient
+                    if isHovered && !isDisabled {
+                        Color.white.opacity(0.1)
+                    }
+                }
+            )
             .cornerRadius(12)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
-            .opacity(isDisabled ? 0.5 : (configuration.isPressed ? 0.9 : 1.0))
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .shadow(color: isDisabled ? .clear : Color(hex: "FF6B6B").opacity(0.4), radius: 12, y: 4)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(isDisabled ? 0.5 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
+            }
     }
 }
 
-// Card for AI provider choices (Cloud vs. Local)
-private struct AIChoiceCard: View {
+private struct PremiumSecondaryButton: ButtonStyle {
+    var isDisabled: Bool = false
+    @State private var isHovered = false
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(Color(hex: "EAEAEA"))
+            .padding(.vertical, 14)
+            .padding(.horizontal, 28)
+            .background(Color(hex: "2A2A2A"))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: "3A3A3A"), lineWidth: 1)
+            )
+            .brightness(isHovered && !isDisabled ? 0.05 : 0)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(isDisabled ? 0.5 : 1.0)
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    isHovered = hovering
+                }
+            }
+    }
+}
+
+// MARK: - Premium AI Choice Card
+
+private struct PremiumAICard: View {
     let title: String
+    let subtitle: String
     let icon: String
-    let pros: [String]
-    let cons: [String]
+    let features: [String]
+    let limitations: [String]
     let isSelected: Bool
     let action: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 15) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.title2)
-                        .foregroundStyle(brandGradient)
-                    Text(title)
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
+            VStack(alignment: .leading, spacing: 18) {
+                // Header
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(isSelected ? brandGradient : LinearGradient(colors: [Color(hex: "3A3A3A")], startPoint: .top, endPoint: .bottom))
+                            .frame(width: 48, height: 48)
+                            .shadow(color: isSelected ? Color(hex: "FF6B6B").opacity(0.4) : .clear, radius: 8)
+                        
+                        Image(systemName: icon)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(.white)
+                        Text(subtitle)
+                            .font(.system(size: 13))
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                    }
+                    
                     Spacer()
+                    
                     if isSelected {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.title2)
+                            .font(.system(size: 24))
                             .foregroundStyle(brandGradient)
+                            .transition(.scale.combined(with: .opacity))
                     }
                 }
                 
-                VStack(alignment: .leading, spacing: 5) {
-                    ForEach(pros, id: \.self) { pro in
-                        HStack(alignment: .top) {
+                Divider()
+                    .background(Color(hex: "3A3A3A"))
+                
+                // Features
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(features, id: \.self) { feature in
+                        HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "checkmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(Color.green)
+                                .font(.system(size: 12))
+                                .foregroundColor(.green)
                                 .padding(.top, 2)
-                            Text(pro)
-                                .font(.callout)
+                            Text(feature)
+                                .font(.system(size: 13))
                                 .foregroundColor(Color(hex: "EAEAEA"))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    ForEach(cons, id: \.self) { con in
-                        HStack(alignment: .top) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.caption)
-                                .foregroundColor(Color.red)
+                    
+                    ForEach(limitations, id: \.self) { limitation in
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "FF8E53"))
                                 .padding(.top, 2)
-                            Text(con)
-                                .font(.callout)
+                            Text(limitation)
+                                .font(.system(size: 13))
                                 .foregroundColor(Color(hex: "AAAAAA"))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
             }
-            .padding(25)
-            .background(
-                RoundedRectangle(cornerRadius: 15)
-                    .fill(Color(hex: "2F2F2F"))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 15)
-                            .stroke(isSelected ? AnyShapeStyle(brandGradient) : AnyShapeStyle(Color(hex: "3A3A3A")), lineWidth: isSelected ? 3 : 1)
-                    )
-                    .shadow(color: isSelected ? Color(hex: "FF8E53").opacity(0.4) : .clear, radius: 8, x: 0, y: 4)
+            .padding(24)
+            .background(Color(hex: "242424"))
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? brandGradient : LinearGradient(colors: [Color(hex: "3A3A3A")], startPoint: .top, endPoint: .bottom), lineWidth: isSelected ? 2 : 1)
             )
+            .shadow(color: isSelected ? Color(hex: "FF6B6B").opacity(0.2) : Color.black.opacity(0.1), radius: isSelected ? 16 : 8, y: isSelected ? 8 : 4)
+            .brightness(isHovered && !isSelected ? 0.05 : 0)
+            .scaleEffect(isHovered ? 1.01 : 1.0)
         }
         .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
-// Helper View for Permission Rows
-private struct PermissionRow: View {
+// MARK: - Permission Card
+
+private struct PermissionCard: View {
     let title: String
     let description: String
     let icon: String
     let hasPermission: Bool
     let grantAction: () -> Void
     
+    @State private var isHovered = false
+    
     var body: some View {
-        HStack(alignment: .top, spacing: 15) {
-            Image(systemName: icon)
-                .font(.title)
-                .foregroundStyle(brandGradient)
-                .frame(width: 30)
-                .padding(.top, 3)
+        HStack(spacing: 16) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(hasPermission ? LinearGradient(colors: [.green.opacity(0.2)], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [Color(hex: "3A3A3A")], startPoint: .top, endPoint: .bottom))
+                    .frame(width: 56, height: 56)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(hasPermission ? .green : Color(hex: "AAAAAA"))
+            }
             
-            VStack(alignment: .leading, spacing: 5) {
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.headline)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white)
                 Text(description)
-                    .font(.subheadline)
+                    .font(.system(size: 13))
                     .foregroundColor(Color(hex: "AAAAAA"))
                     .fixedSize(horizontal: false, vertical: true)
             }
             
             Spacer()
             
+            // Status/Button
             if hasPermission {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.title)
-                    .foregroundColor(.green)
-                    .transition(.scale.combined(with: .opacity))
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    Text("Granted")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+                .transition(.scale.combined(with: .opacity))
             } else {
-                Button("Grant", action: grantAction)
-                    .buttonStyle(SecondaryButtonStyle())
+                Button(action: grantAction) {
+                    Text("Grant Access")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(brandGradient)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
             }
         }
-        .animation(.easeInOut(duration: 0.3), value: hasPermission)
+        .padding(20)
+        .background(Color(hex: "242424"))
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(hasPermission ? Color.green.opacity(0.3) : Color(hex: "3A3A3A"), lineWidth: 1)
+        )
+        .brightness(isHovered ? 0.03 : 0)
+        .animation(.easeInOut(duration: 0.2), value: hasPermission)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
-// MARK: - Animated Mock Views
-// ... (All Animated Mock Views are unchanged) ...
-// Mockup for Welcome Page (Chat Demo)
+// MARK: - Animated Mock Views (Keeping originals but with minor style updates)
+
 private struct AnimatedChatMock: View {
     @State private var showFile = false
     @State private var showQuestion = false
@@ -180,67 +267,65 @@ private struct AnimatedChatMock: View {
     @State private var resetAnimation = false
     
     var body: some View {
-        VStack(spacing: 8) {
-            // Mock Chat
-            VStack(spacing: 12) {
+        VStack(spacing: 12) {
+            VStack(spacing: 14) {
                 if showFile {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "doc.text.fill")
+                            .foregroundStyle(brandGradient)
                         Text("Company_Report.pdf")
+                            .font(.system(size: 13, weight: .medium))
                         Spacer()
                     }
-                    .font(.caption)
-                    .padding(8)
-                    .background(Color(hex: "2F2F2F"))
-                    .cornerRadius(6)
+                    .padding(10)
+                    .background(Color(hex: "2A2A2A"))
+                    .cornerRadius(8)
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 }
                 
                 if showQuestion {
                     Text("What's the main takeaway?")
-                        .font(.caption)
-                        .padding(10)
+                        .font(.system(size: 13))
+                        .padding(12)
                         .background(Color(hex: "3A3A3A"))
-                        .cornerRadius(10)
+                        .cornerRadius(12)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
                 
                 if showLoading {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         ForEach(0..<3) { i in
-                            Circle().frame(width: 4, height: 4)
+                            Circle()
+                                .frame(width: 6, height: 6)
+                                .foregroundColor(Color(hex: "FF6B6B"))
+                                .opacity(0.6)
                         }
                     }
-                    .foregroundColor(Color(hex: "8A8A8A"))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .transition(.opacity)
                 }
                 
                 if showAnswer {
                     Text("The main takeaway is a 20% increase in Q4 revenue, driven by new market expansion.")
-                        .font(.caption)
-                        .padding(10)
+                        .font(.system(size: 13))
+                        .padding(12)
                         .background(Color(hex: "2A2A2A"))
-                        .cornerRadius(10)
+                        .cornerRadius(12)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                 }
                 Spacer()
             }
-            .padding(12)
+            .padding(16)
         }
-        .frame(width: 400, height: 200)
+        .frame(width: 450, height: 220)
         .background(Color(hex: "1A1A1A"))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
-        .shadow(color: .black.opacity(0.4), radius: 15, x: 0, y: 10)
-        .onAppear {
-            startAnimation()
-        }
-        .onChange(of: resetAnimation) { _, _ in
-            startAnimation()
-        }
+        .cornerRadius(16)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(hex: "3A3A3A"), lineWidth: 1))
+        .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
+        .onAppear { startAnimation() }
+        .onChange(of: resetAnimation) { _, _ in startAnimation() }
     }
     
     func startAnimation() {
@@ -249,15 +334,9 @@ private struct AnimatedChatMock: View {
         showLoading = false
         showAnswer = false
         
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.5)) {
-            showFile = true
-        }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(1.5)) {
-            showQuestion = true
-        }
-        withAnimation(.easeInOut.delay(2.5)) {
-            showLoading = true
-        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.5)) { showFile = true }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(1.5)) { showQuestion = true }
+        withAnimation(.easeInOut.delay(2.5)) { showLoading = true }
         withAnimation(.easeInOut.delay(3.5)) {
             showLoading = false
             showAnswer = true
@@ -268,266 +347,42 @@ private struct AnimatedChatMock: View {
     }
 }
 
-// Mockup for Features Page (Web Scrape)
-private struct AnimatedWebScrapeMock: View {
-    @State private var showURL = false
-    @State private var showLoading = false
-    @State private var showPill = false
-    @State private var resetAnimation = false
-
-    var body: some View {
-        VStack(spacing: 15) {
-            HStack(spacing: 8) {
-                Image(systemName: "text.cursor")
-                    .foregroundColor(Color(hex: "666666"))
-                if showURL {
-                    Text("https://en.wikipedia.org/wiki/Swift...")
-                        .font(.caption)
-                        .foregroundColor(Color(hex: "EAEAEA"))
-                        .transition(.opacity)
-                }
-                Spacer()
-            }
-            .padding(12)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "242424")))
-            
-            if showLoading {
-                ProgressView()
-                    .scaleEffect(0.8)
-                    .transition(.opacity)
-            }
-            
-            if showPill {
-                HStack {
-                    Image(systemName: "doc.text.fill")
-                    Text("en.wikipedia.org.txt")
-                    Spacer()
-                }
-                .font(.caption)
-                .padding(8)
-                .background(Color(hex: "2F2F2F"))
-                .cornerRadius(6)
-                .transition(.move(edge: .leading).combined(with: .opacity))
-            }
-            Spacer()
-        }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 120)
-        .background(Color(hex: "1A1A1A"))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
-        .onAppear { startAnimation() }
-        .onChange(of: resetAnimation) { _, _ in startAnimation() }
-    }
-    
-    func startAnimation() {
-        showURL = false
-        showLoading = false
-        showPill = false
-        
-        withAnimation(.easeInOut.delay(0.5)) {
-            showURL = true
-        }
-        withAnimation(.easeInOut.delay(1.5)) {
-            showURL = false
-            showLoading = true
-        }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(2.5)) {
-            showLoading = false
-            showPill = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            resetAnimation.toggle()
-        }
-    }
-}
-
-// Mockup for Features Page (OCR)
-private struct AnimatedOCRMock: View {
-    @State private var showImage = false
-    @State private var showLoading = false
-    @State private var showPill = false
-    @State private var resetAnimation = false
+private struct FeatureShowcaseCard: View {
+    let icon: String
+    let title: String
+    let description: String
     
     var body: some View {
-        VStack(spacing: 15) {
-            if showImage {
-                Image(systemName: "photo.fill")
-                    .font(.system(size: 30))
+        VStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(colors: [Color(hex: "FF6B6B").opacity(0.2), Color(hex: "FF8E53").opacity(0.2)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 64, height: 64)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
                     .foregroundStyle(brandGradient)
-                    .transition(.scale.combined(with: .opacity))
             }
             
-            if showLoading {
-                ProgressView()
-                    .scaleEffect(0.8)
-                    .transition(.opacity)
+            VStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white)
+                Text(description)
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "AAAAAA"))
+                    .multilineTextAlignment(.center)
             }
-            
-            if showPill {
-                HStack {
-                    Image(systemName: "doc.text.fill")
-                    Text("Assignment.jpg.txt")
-                    Spacer()
-                }
-                .font(.caption)
-                .padding(8)
-                .background(Color(hex: "2F2F2F"))
-                .cornerRadius(6)
-                .transition(.move(edge: .leading).combined(with: .opacity))
-            }
-            Spacer()
         }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 120)
-        .background(Color(hex: "1A1A1A"))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
-        .onAppear { startAnimation() }
-        .onChange(of: resetAnimation) { _, _ in startAnimation() }
-    }
-    
-    func startAnimation() {
-        showImage = false
-        showLoading = false
-        showPill = false
-        
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(0.5)) {
-            showImage = true
-        }
-        withAnimation(.easeInOut.delay(1.5)) {
-            showImage = false
-            showLoading = true
-        }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.7).delay(2.5)) {
-            showLoading = false
-            showPill = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
-            resetAnimation.toggle()
-        }
+        .padding(20)
+        .frame(maxWidth: .infinity)
+        .background(Color(hex: "242424"))
+        .cornerRadius(14)
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color(hex: "3A3A3A"), lineWidth: 1))
     }
 }
 
-// Mockup for Features Page (Global Library)
-private struct AnimatedLibraryMock: View {
-    @State private var brainOn = false
-    @State private var resetAnimation = false
-
-    var body: some View {
-        VStack(spacing: 15) {
-            Image(systemName: "brain")
-                .font(.system(size: 30))
-                .foregroundColor(brainOn ? Color(hex: "FF6B6B") : Color(hex: "666666"))
-                .shadow(
-                    color: brainOn ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
-                    radius: brainOn ? 8 : 0
-                )
-            
-            Text(brainOn ? "Global Library Active" : "Global Library Inactive")
-                .font(.callout)
-                .fontWeight(.semibold)
-                .foregroundColor(brainOn ? .white : Color(hex: "AAAAAA"))
-            
-            Text("Access your key files in *any* chat.")
-                .font(.caption)
-                .foregroundColor(Color(hex: "AAAAAA"))
-        }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 120)
-        .background(Color(hex: "1A1A1A"))
-        .cornerRadius(12)
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
-        .onAppear { startAnimation() }
-        .onChange(of: resetAnimation) { _, _ in startAnimation() }
-    }
-    
-    func startAnimation() {
-        brainOn = false
-        withAnimation(.easeInOut(duration: 1.0).delay(1.0)) {
-            brainOn = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-            resetAnimation.toggle()
-        }
-    }
-}
-
-// Mockup for Permissions Page
-private struct MockSettingsToggleView: View {
-    @State private var isAnimating = false
-    @State private var showPlus = true
-    @State private var showOmni = false
-    @State private var isToggled = false
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Image(systemName: "app.dash")
-                    .font(.title2)
-                Text("Other App")
-                Spacer()
-                Toggle("", isOn: .constant(true)).labelsHidden()
-            }
-            .foregroundColor(Color(hex: "AAAAAA"))
-            .padding(8)
-            
-            if showOmni {
-                HStack {
-                    Image(systemName: "brain.head.profile")
-                        .font(.title2)
-                        .foregroundStyle(brandGradient)
-                    Text("Omni")
-                        .fontWeight(.semibold)
-                    Spacer()
-                    Toggle("", isOn: $isToggled).labelsHidden()
-                }
-                .padding(8)
-                .background(Color.blue.opacity(0.3))
-                .cornerRadius(6)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-            
-            if showPlus {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(Color(hex: "8A8A8A"))
-                    .scaleEffect(isAnimating ? 1.2 : 1.0)
-                    .opacity(isAnimating ? 1.0 : 0.7)
-            }
-        }
-        .padding(12)
-        .frame(width: 250, height: 140, alignment: .topLeading)
-        .background(RoundedRectangle(cornerRadius: 8).fill(Color(hex: "1A1A1A")))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "4A4A4A")))
-        .onAppear { startAnimation() }
-    }
-    
-    func startAnimation() {
-        isAnimating = false
-        showPlus = true
-        showOmni = false
-        isToggled = false
-        
-        withAnimation(.easeInOut(duration: 0.5).delay(1.0)) {
-            isAnimating = true
-        }
-        withAnimation(.easeInOut(duration: 0.5).delay(1.5)) {
-            isAnimating = false
-            showPlus = false
-            showOmni = true
-        }
-        withAnimation(.easeInOut(duration: 0.5).delay(2.5)) {
-            isToggled = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
-            startAnimation()
-        }
-    }
-}
-
-
-// MARK: - Main SetupView
+// MARK: - Main Setup View
 
 struct SetupView: View {
     @AppStorage(SettingsKeys.hasCompletedSetup) var hasCompletedSetup: Bool = false
@@ -535,261 +390,265 @@ struct SetupView: View {
     @AppStorage(SettingsKeys.anthropicKey) private var anthropicKey: String = ""
     @AppStorage(SettingsKeys.geminiKey) private var geminiKey: String = ""
     @AppStorage(SettingsKeys.selectedProvider) private var selectedProvider: String = "cloud"
-    
-    // *** NEW ***
-    // Use @AppStorage to bind directly to the saved model in UserDefaults
     @AppStorage(SettingsKeys.selectedLocalModel) private var selectedOllamaModel: String = ""
     
     @State private var currentPage = 1
-    @State private var showingSettingsAlert = false
-    
+    @State private var showingAccessibilityAlert = false
+    @State private var showingFullDiskAlert = false
     @State private var cloudProvider: String = "openai"
     @State private var currentApiKey: String = ""
-    
     @State private var hasAccessibilityPermission: Bool = false
-    @State private var hasGrantedFullDiskAccess: Bool = false // This is a proxy
-    
-    // *** NEW *** State for Ollama model list
+    @State private var hasGrantedFullDiskAccess: Bool = false
     @State private var ollamaModels: [OllamaModel] = []
     @State private var ollamaFetchError: String? = nil
     @State private var isFetchingModels: Bool = false
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            setupHeader
+        ZStack {
+            Color(hex: "1A1A1A").ignoresSafeArea()
             
-            // Content Area
-            VStack {
-                switch currentPage {
-                case 1: welcomePage
-                case 2: featuresPage
-                case 3: aiSetupPage
-                case 4: permissionsPage
-                default: EmptyView()
+            VStack(spacing: 0) {
+                setupHeader
+                
+                TabView(selection: $currentPage) {
+                    welcomePage.tag(1)
+                    featuresPage.tag(2)
+                    aiSetupPage.tag(3)
+                    permissionsPage.tag(4)
                 }
+                .tabViewStyle(.automatic)
+                .animation(.easeInOut(duration: 0.3), value: currentPage)
+                
+                setupFooter
             }
-            .animation(.easeInOut(duration: 0.4), value: currentPage)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "1A1A1A"))
-            
-            // Footer
-            setupFooter
         }
-        .frame(width: 700, height: 750)
-        .background(Color(hex: "1A1A1A"))
-        .foregroundColor(.white)
-        .cornerRadius(15)
-        .alert("Grant Full Disk Access", isPresented: $showingSettingsAlert) {
-            Button("Got It") {
-                // Assume the user did it to enable the Finish button.
+        .frame(width: 800, height: 700)
+        .cornerRadius(20)
+        .shadow(color: .black.opacity(0.5), radius: 30, y: 20)
+        .alert("Grant Accessibility Access", isPresented: $showingAccessibilityAlert) {
+            Button("I've Granted Access") {
+                hasAccessibilityPermission = true
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Please grant Omni 'Accessibility' permission in System Settings, then click 'I've Granted Access' below.")
+        }
+        .alert("Grant Full Disk Access", isPresented: $showingFullDiskAlert) {
+            Button("I've Granted Access") {
                 hasGrantedFullDiskAccess = true
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Please grant Omni 'Full Disk Access' in System Settings to enable file analysis. You may need to drag Omni into the list manually.")
+            Text("Please grant Omni 'Full Disk Access' in System Settings to enable file analysis, then click 'I've Granted Access' below.")
         }
     }
     
-    // MARK: - Header & Footer Components
+    // MARK: - Header & Footer
     
     private var setupHeader: some View {
-        VStack(spacing: 10) {
-            HStack {
-                Image(systemName: "brain.head.profile")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 28, height: 28)
-                    .foregroundStyle(brandGradient)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(brandGradient)
+                        .frame(width: 40, height: 40)
+                        .shadow(color: Color(hex: "FF6B6B").opacity(0.4), radius: 8)
+                    
+                    Image(systemName: "brain.head.profile")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(.white)
+                }
                 
                 Text("Omni Setup")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.white)
                 
                 Spacer()
                 
-                Text("Step \(currentPage)/4")
-                    .font(.callout)
-                    .foregroundColor(Color(hex: "8A8A8A"))
+                HStack(spacing: 8) {
+                    ForEach(1...4, id: \.self) { step in
+                        Circle()
+                            .fill(step <= currentPage ? brandGradient : LinearGradient(colors: [Color(hex: "3A3A3A")], startPoint: .top, endPoint: .bottom))
+                            .frame(width: 8, height: 8)
+                            .shadow(color: step <= currentPage ? Color(hex: "FF6B6B").opacity(0.4) : .clear, radius: 4)
+                    }
+                }
             }
-            .padding(.horizontal, 30)
-            .padding(.top, 20)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 24)
             
-            // Progress Bar
+            // Progress bar
             GeometryReader { geometry in
-                let progress = CGFloat(currentPage) / 4.0
-                Capsule()
-                    .fill(Color(hex: "2F2F2F"))
-                    .frame(height: 6)
-                    .overlay(
-                        Capsule()
-                            .fill(brandGradient)
-                            .frame(width: geometry.size.width * progress)
-                            .animation(.easeOut(duration: 0.4), value: progress)
-                        , alignment: .leading
-                    )
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color(hex: "2A2A2A"))
+                        .frame(height: 4)
+                    
+                    Capsule()
+                        .fill(brandGradient)
+                        .frame(width: geometry.size.width * CGFloat(currentPage) / 4, height: 4)
+                        .shadow(color: Color(hex: "FF6B6B").opacity(0.6), radius: 6)
+                        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: currentPage)
+                }
             }
-            .frame(height: 6)
-            .padding(.horizontal, 30)
-            .padding(.bottom, 15)
+            .frame(height: 4)
+            .padding(.horizontal, 32)
+            .padding(.bottom, 20)
         }
-        .background(Color(hex: "242424"))
+        .background(Color(hex: "1F1F1F"))
     }
     
     private var setupFooter: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
             Button(action: {
-                withAnimation { currentPage -= 1 }
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    currentPage -= 1
+                }
             }) {
                 Label("Back", systemImage: "chevron.left")
             }
-            .buttonStyle(SecondaryButtonStyle(isDisabled: currentPage == 1))
+            .buttonStyle(PremiumSecondaryButton(isDisabled: currentPage == 1))
             .disabled(currentPage == 1)
             
             Spacer()
             
-            // --- *** UPDATED *** Disability Logic ---
             let isPage3CloudDisabled = (currentPage == 3 && selectedProvider == "cloud" && currentApiKey.isEmpty)
-            // Disable if local is selected but no model is chosen
             let isPage3LocalDisabled = (currentPage == 3 && selectedProvider == "local" && selectedOllamaModel.isEmpty)
             let isPage4Disabled = (currentPage == 4 && (!hasAccessibilityPermission || !hasGrantedFullDiskAccess))
-            
             let isDisabled = isPage3CloudDisabled || isPage3LocalDisabled || isPage4Disabled
-            // --- End Update ---
             
             if currentPage < 4 {
                 Button(action: {
                     handleNext()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        currentPage += 1
+                    }
                 }) {
                     Label("Next", systemImage: "chevron.right")
+                        .labelStyle(.titleAndIcon)
                 }
-                .buttonStyle(PrimaryButtonStyle(isDisabled: isDisabled))
+                .buttonStyle(PremiumPrimaryButton(isDisabled: isDisabled))
                 .disabled(isDisabled)
             } else {
-                Button(action: {
-                    completeSetup()
-                }) {
-                    Label("Finish Setup", systemImage: "sparkles")
+                Button(action: completeSetup) {
+                    Label("Get Started", systemImage: "sparkles")
                 }
-                .buttonStyle(PrimaryButtonStyle(isDisabled: isDisabled))
+                .buttonStyle(PremiumPrimaryButton(isDisabled: isDisabled))
                 .disabled(isDisabled)
             }
         }
-        .padding(20)
-        .background(Color(hex: "242424"))
+        .padding(.horizontal, 32)
+        .padding(.vertical, 24)
+        .background(Color(hex: "1F1F1F"))
     }
     
-    // MARK: - Page Views
+    // MARK: - Pages
     
     private var welcomePage: some View {
-        VStack(spacing: 30) {
-            Spacer()
-            
-            Text("Welcome to Omni.")
-                .font(.system(size: 44, weight: .bold))
-                .foregroundColor(.white)
-            
-            Text("See how Omni turns your files into answers.")
-                .font(.title3)
-                .multilineTextAlignment(.center)
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .padding(.horizontal, 60)
-            
-            AnimatedChatMock()
-            
-            Spacer()
-        }
-        .padding(40)
-    }
-    
-    private var featuresPage: some View {
         ScrollView {
-            VStack(alignment: .center, spacing: 30) {
-                Text("Unlock Your Full Context")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+            VStack(spacing: 40) {
+                Spacer()
                 
-                Text("Omni works with more than just text.")
-                    .font(.title3)
-                    .foregroundColor(Color(hex: "AAAAAA"))
-                    .padding(.bottom, 10)
-
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+                VStack(spacing: 16) {
+                    Text("Welcome to Omni")
+                        .font(.system(size: 48, weight: .bold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.white, Color(hex: "EAEAEA")],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
                     
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Analyze Web Pages")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "EAEAEA"))
-                            .padding(.leading, 5)
-                        AnimatedWebScrapeMock()
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Read Text From Images")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "EAEAEA"))
-                            .padding(.leading, 5)
-                        AnimatedOCRMock()
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Build a Global Library")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "EAEAEA"))
-                            .padding(.leading, 5)
-                        AnimatedLibraryMock()
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Access Anywhere")
-                            .font(.headline)
-                            .foregroundColor(Color(hex: "EAEAEA"))
-                            .padding(.leading, 5)
-                        VStack(spacing: 15) {
-                            Image(systemName: "keyboard.option")
-                                .font(.system(size: 30))
-                                .foregroundStyle(brandGradient)
-                            Text("⌥ + Space")
-                                .font(.system(.callout, design: .monospaced))
-                                .padding(8)
-                                .background(Color(hex: "2F2F2F"))
-                                .cornerRadius(6)
-                            
-                            Text("Summon Omni from any app.")
-                                .font(.caption)
-                                .foregroundColor(Color(hex: "AAAAAA"))
-                        }
-                        .padding()
-                        .frame(maxWidth: .infinity, minHeight: 120)
-                        .background(Color(hex: "1A1A1A"))
-                        .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color(hex: "3A3A3A")))
-                    }
+                    Text("Your AI-powered file assistant")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(hex: "AAAAAA"))
                 }
+                
+                AnimatedChatMock()
+                
+                Text("Turn your files into instant answers")
+                    .font(.system(size: 16))
+                    .foregroundColor(Color(hex: "8A8A8A"))
+                
+                Spacer()
             }
             .padding(40)
         }
     }
     
+    private var featuresPage: some View {
+        ScrollView {
+            VStack(spacing: 32) {
+                VStack(spacing: 12) {
+                    Text("Powerful Features")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Everything you need for intelligent file management")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                }
+                .padding(.top, 20)
+                
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    FeatureShowcaseCard(
+                        icon: "globe",
+                        title: "Web Analysis",
+                        description: "Extract and analyze content from any webpage"
+                    )
+                    
+                    FeatureShowcaseCard(
+                        icon: "doc.text.viewfinder",
+                        title: "Smart OCR",
+                        description: "Read and index text from images instantly"
+                    )
+                    
+                    FeatureShowcaseCard(
+                        icon: "folder.fill.badge.gearshape",
+                        title: "Global Library",
+                        description: "Access your key files in any conversation"
+                    )
+                    
+                    FeatureShowcaseCard(
+                        icon: "command",
+                        title: "Quick Access",
+                        description: "⌥ + Space to summon from anywhere"
+                    )
+                }
+            }
+            .padding(32)
+        }
+    }
+    
     private var aiSetupPage: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 30) {
-                Text("Choose Your AI Engine")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+            VStack(spacing: 24) {
+                VStack(spacing: 12) {
+                    Text("Choose Your AI")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Select between powerful cloud models or private local processing")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 20)
                 
-                Text("Omni supports both powerful cloud-based AIs and privacy-focused local models. Select what's best for you.")
-                    .font(.title3)
-                    .foregroundColor(Color(hex: "AAAAAA"))
-                    .padding(.bottom, 10)
-                
-                AIChoiceCard(
-                    title: "Cloud AI (Recommended)",
+                PremiumAICard(
+                    title: "Cloud AI",
+                    subtitle: "Recommended for best results",
                     icon: "cloud.fill",
-                    pros: ["Access to the smartest, most powerful models (e.g., GPT-4o, Claude 3.5 Sonnet).", "Easier setup, no local software required."],
-                    cons: ["Requires an internet connection.", "Incurs usage costs from the AI provider.", "Data processed by the AI provider."],
+                    features: [
+                        "Most powerful models (GPT-4o, Claude 3.5 Sonnet)",
+                        "No local setup required",
+                        "Always up-to-date"
+                    ],
+                    limitations: [
+                        "Requires internet connection",
+                        "Usage costs apply"
+                    ],
                     isSelected: selectedProvider == "cloud"
                 ) {
                     selectedProvider = "cloud"
@@ -801,228 +660,285 @@ struct SetupView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 
-                AIChoiceCard(
-                    title: "Local LLM (Privacy-Focused)",
-                    icon: "cpu.fill",
-                    pros: ["100% private: your data never leaves your Mac.", "Free to use, works entirely offline.", "No API keys needed."],
-                    cons: ["Requires a separate app (Ollama) to be installed and running.", "Models are generally less powerful than cloud alternatives.", "Uses your Mac's CPU/GPU resources."],
+                PremiumAICard(
+                    title: "Local AI",
+                    subtitle: "Privacy-focused processing",
+                    icon: "lock.shield.fill",
+                    features: [
+                        "100% private and offline",
+                        "No API costs",
+                        "Your data never leaves your Mac"
+                    ],
+                    limitations: [
+                        "Requires Ollama installation",
+                        "Less powerful than cloud models"
+                    ],
                     isSelected: selectedProvider == "local"
                 ) {
                     selectedProvider = "local"
                     currentApiKey = ""
-                    // *** NEW *** Fetch models when user clicks
                     fetchOllamaModels()
                 }
                 
                 if selectedProvider == "local" {
-                    localProviderSetup // This view is now updated
+                    localProviderSetup
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
-            .padding(40)
-            .frame(maxWidth: .infinity)
+            .padding(32)
         }
     }
     
     private var cloudProviderSetup: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Select Cloud Service:")
-                .font(.headline)
-                .foregroundColor(Color(hex: "EAEAEA"))
+            Text("Cloud Provider")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
             
-            Picker("AI Provider", selection: $cloudProvider) {
+            Picker("Provider", selection: $cloudProvider) {
                 Text("OpenAI").tag("openai")
                 Text("Anthropic").tag("anthropic")
-                Text("Google Gemini").tag("gemini")
+                Text("Google").tag("gemini")
             }
             .pickerStyle(.segmented)
-            .labelsHidden()
             .onChange(of: cloudProvider) { _, _ in currentApiKey = "" }
             
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Get your API key from:")
-                    .font(.subheadline)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("API Key")
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(Color(hex: "AAAAAA"))
-                Link(apiKeyURL.host ?? "provider website", destination: apiKeyURL)
-                    .font(.callout)
-                    .foregroundStyle(brandGradient)
-            }
-            
-            SecureField(apiKeyPlaceholder, text: $currentApiKey)
-                .textFieldStyle(.plain)
-                .font(.body)
+                
+                HStack(spacing: 10) {
+                    Image(systemName: "key.fill")
+                        .foregroundColor(Color(hex: "666666"))
+                        .font(.system(size: 14))
+                    
+                    SecureField(apiKeyPlaceholder, text: $currentApiKey)
+                        .textFieldStyle(.plain)
+                        .font(.system(size: 13, design: .monospaced))
+                }
                 .padding(12)
                 .background(Color(hex: "1F1F1F"))
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "3A3A3A")))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color(hex: "3A3A3A"), lineWidth: 1)
+                )
+            }
             
-            Text("Your API key is securely stored in your Mac's Keychain.")
-                .font(.caption)
-                .foregroundColor(Color(hex: "8A8A8A"))
+            Link(destination: apiKeyURL) {
+                HStack(spacing: 6) {
+                    Text("Get your API key")
+                        .font(.system(size: 13))
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11))
+                }
+                .foregroundStyle(brandGradient)
+            }
         }
-        .padding(25)
+        .padding(20)
         .background(Color(hex: "242424"))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(hex: "3A3A3A"), lineWidth: 1)
+        )
     }
     
-    // --- *** UPDATED *** localProviderSetup ---
     private var localProviderSetup: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("Ollama Configuration:")
-                .font(.headline)
-                .foregroundColor(Color(hex: "EAEAEA"))
-            
-            // --- *** NEW *** Model Picker Section ---
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Select Installed Model:")
-                    .font(.subheadline)
-                    .foregroundColor(Color(hex: "EAEAEA"))
-
-                if isFetchingModels {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                        Text("Fetching models...")
-                            .font(.caption)
+            if isFetchingModels {
+                HStack(spacing: 12) {
+                    ProgressView().scaleEffect(0.8)
+                    Text("Searching for models...")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 20)
+            } else if let error = ollamaFetchError {
+                VStack(spacing: 16) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(Color(hex: "FF8E53"))
+                    
+                    Text(error)
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                        .multilineTextAlignment(.center)
+                    
+                    Link(destination: URL(string: "https://ollama.com/download")!) {
+                        Text("Download Ollama")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(brandGradient)
+                            .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else if ollamaModels.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "tray")
+                        .font(.system(size: 32))
+                        .foregroundColor(Color(hex: "666666"))
+                    
+                    Text("No models found")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                    
+                    Text("Install a model using Terminal:")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(hex: "8A8A8A"))
+                    
+                    Text("ollama pull llama3.1")
+                        .font(.system(size: 13, design: .monospaced))
+                        .padding(10)
+                        .background(Color(hex: "1F1F1F"))
+                        .cornerRadius(8)
+                        .foregroundColor(Color(hex: "FF8E53"))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Select Model")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Menu {
+                        ForEach(ollamaModels, id: \.name) { model in
+                            Button(model.name) {
+                                selectedOllamaModel = model.name
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "cpu")
+                                .foregroundColor(Color(hex: "666666"))
+                            
+                            Text(selectedOllamaModel.isEmpty ? "Choose a model..." : selectedOllamaModel)
+                                .font(.system(size: 13))
+                                .foregroundColor(selectedOllamaModel.isEmpty ? Color(hex: "666666") : .white)
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "666666"))
+                        }
+                        .padding(12)
+                        .background(Color(hex: "1F1F1F"))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(hex: "3A3A3A"), lineWidth: 1)
+                        )
+                    }
+                    .menuStyle(.borderlessButton)
+                    
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                            .font(.system(size: 12))
+                        Text("\(ollamaModels.count) model(s) available")
+                            .font(.system(size: 12))
                             .foregroundColor(Color(hex: "AAAAAA"))
                     }
-                } else if let error = ollamaFetchError {
-                    Text("Error: \(error)")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                } else if ollamaModels.isEmpty {
-                    Text("No models found. Make sure Ollama is running and you have downloaded a model (e.g., `ollama run llama3.1`).")
-                        .font(.caption)
-                        .foregroundColor(Color(hex: "AAAAAA"))
-                } else {
-                    // We have models, show the picker
-                    Picker("Model", selection: $selectedOllamaModel) {
-                        Text("Select a model...").tag("")
-                        ForEach(ollamaModels, id: \.name) { model in
-                            Text(model.name).tag(model.name)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    // No need for .onChange, @AppStorage handles saving
                 }
             }
-            .padding(.bottom, 10)
-            // --- End Model Picker Section ---
-
-            Text("How to get more models:")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "EAEAEA"))
-
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .top) {
-                    Text("1.")
-                    Button("Download and run the Ollama app") {
-                        if let url = URL(string: "https://ollama.com/download") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .buttonStyle(.link)
-                    .foregroundStyle(brandGradient)
-                }
-                Text("2. Ensure the Ollama icon is visible in your Mac's menu bar (it needs to be running).")
-                Text("3. Open Terminal and install a model (e.g., Llama 3.1):")
-                
-                Text("ollama run llama3.1")
-                    .font(.system(.body, design: .monospaced))
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color(hex: "1F1F1F"))
-                    .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color(hex: "3A3A3A")))
-            }
-            .font(.subheadline)
-            .foregroundColor(Color(hex: "AAAAAA"))
         }
-        .padding(25)
+        .padding(20)
         .background(Color(hex: "242424"))
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
+        .cornerRadius(14)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color(hex: "3A3A3A"), lineWidth: 1)
+        )
         .onAppear {
-            // Fetch models when this view appears
             fetchOllamaModels()
         }
     }
     
-    // --- *** UPDATED *** Permissions Page ---
     private var permissionsPage: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Grant Permissions")
-                .font(.largeTitle)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-            
-            Text("Omni needs two key permissions to unlock its full potential. Your data **never** leaves your Mac.")
-                .font(.title3)
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .padding(.bottom, 10)
-            
-            // --- Visual Guide ---
-            VStack(alignment: .leading, spacing: 25) { // Added more spacing
+        ScrollView {
+            VStack(spacing: 32) {
+                VStack(spacing: 12) {
+                    Text("Grant Permissions")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text("Two quick steps to unlock Omni's full potential")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                }
+                .padding(.top, 20)
                 
-                // --- 1. ACCESSIBILITY PERMISSION ROW ---
-                PermissionRow(
-                    title: "Accessibility",
-                    description: "Required to capture selected text with your hotkey (Cmd+Opt+X).",
-                    icon: "hand.cursor.fill",
-                    hasPermission: hasAccessibilityPermission,
-                    grantAction: {
-                        PermissionsHelper.requestAccessibilityPermission()
-                        // Re-check permission after a moment
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                            checkAllPermissions()
+                VStack(spacing: 16) {
+                    PermissionCard(
+                        title: "Accessibility Access",
+                        description: "Allows Omni to capture text with your hotkey (⌥ + Space)",
+                        icon: "hand.point.up.braille.fill",
+                        hasPermission: hasAccessibilityPermission,
+                        grantAction: {
+                            openAccessibilitySettings()
+                            showingAccessibilityAlert = true
                         }
+                    )
+                    
+                    PermissionCard(
+                        title: "Full Disk Access",
+                        description: "Required to search and index your local files",
+                        icon: "folder.fill.badge.gearshape",
+                        hasPermission: hasGrantedFullDiskAccess,
+                        grantAction: {
+                            openFullDiskAccessSettings()
+                            showingFullDiskAlert = true
+                        }
+                    )
+                }
+                
+                // Info box
+                VStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(brandGradient)
+                        
+                        Text("Your Privacy Matters")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(.white)
+                        
+                        Spacer()
                     }
+                    
+                    Text("All file processing happens locally on your Mac. Your data never leaves your device unless you explicitly use cloud AI features.")
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(20)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: "FF6B6B").opacity(0.1), Color(hex: "FF8E53").opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
-                
-                Divider().background(Color(hex: "3A3A3A"))
-                
-                // --- 2. FULL DISK ACCESS ROW ---
-                PermissionRow(
-                    title: "Full Disk Access",
-                    description: "Required to find, read, and index your local files for analysis.",
-                    icon: "folder.fill.badge.person.crop",
-                    hasPermission: hasGrantedFullDiskAccess,
-                    grantAction: {
-                        openFullDiskAccessSettings()
-                        showingSettingsAlert = true
-                    }
+                .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(brandGradient.opacity(0.3), lineWidth: 1)
                 )
             }
-            .padding(25)
-            .background(Color(hex: "242424"))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.2), radius: 5, x: 0, y: 2)
-            
-            // --- Animated Mock ---
-            Text("How to Grant Access")
-                .font(.headline)
-                .foregroundColor(.white)
-                .padding(.top, 10)
-            
-            Text("1. Click \"Grant\" to open System Settings.\n2. Find Omni in the list.\n3. Turn the toggle ON.")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .fixedSize(horizontal: false, vertical: true)
-            
-            MockSettingsToggleView()
-                .frame(maxWidth: .infinity, alignment: .center)
-            
-            Spacer()
+            .padding(32)
         }
-        .padding(40)
         .onAppear {
-            // Check permissions every time this page appears
             checkAllPermissions()
         }
-        // Re-check when the app becomes active, in case the user
-        // comes back from System Settings
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.willBecomeActiveNotification)) { _ in
             checkAllPermissions()
         }
@@ -1030,18 +946,25 @@ struct SetupView: View {
     
     // MARK: - Helper Functions
     
-    // *** NEW *** Checks all required permissions
     private func checkAllPermissions() {
         self.hasAccessibilityPermission = PermissionsHelper.checkAccessibilityPermission()
-        // We can't *programmatically* check Full Disk Access.
-        // We set `hasGrantedFullDiskAccess` to true when the user
-        // dismisses the "Got It" alert.
     }
     
-    // *** NEW *** Function to fetch Ollama models
+    private func openAccessibilitySettings() {
+        // Modern macOS URL scheme for Accessibility settings
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+    
+    private func openFullDiskAccessSettings() {
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+    
     private func fetchOllamaModels() {
         guard !isFetchingModels else { return }
-        print("Fetching Ollama models...")
         isFetchingModels = true
         ollamaFetchError = nil
         
@@ -1052,22 +975,18 @@ struct SetupView: View {
                 await MainActor.run {
                     self.ollamaModels = models
                     self.isFetchingModels = false
-                    print("Found models: \(models.map { $0.name })")
                     
-                    // Set the picker to the saved value, if it exists in the list
                     let savedModel = UserDefaults.standard.string(forKey: SettingsKeys.selectedLocalModel) ?? ""
                     if models.first(where: { $0.name == savedModel }) != nil {
                         self.selectedOllamaModel = savedModel
                     } else if let firstModel = models.first {
-                        // If no valid model is saved, select the first one
                         self.selectedOllamaModel = firstModel.name
                     } else {
-                        self.selectedOllamaModel = "" // No models installed
+                        self.selectedOllamaModel = ""
                     }
                 }
             } catch {
                 await MainActor.run {
-                    print("Error fetching models: \(error.localizedDescription)")
                     self.ollamaFetchError = "Could not connect to Ollama. Is it running?"
                     self.isFetchingModels = false
                     self.ollamaModels = []
@@ -1104,7 +1023,6 @@ struct SetupView: View {
     
     private func handleNext() {
         if currentPage == 3 {
-            // Save the keys from the AI page
             if selectedProvider == "cloud" {
                 switch cloudProvider {
                 case "openai":
@@ -1118,33 +1036,19 @@ struct SetupView: View {
                 }
                 UserDefaults.standard.set(cloudProvider, forKey: SettingsKeys.selectedProvider)
             } else {
-                // Save local provider and the selected model
                 UserDefaults.standard.set("local", forKey: SettingsKeys.selectedProvider)
-                // @AppStorage already saved the model, but this is good for clarity.
                 UserDefaults.standard.set(selectedOllamaModel, forKey: SettingsKeys.selectedLocalModel)
             }
-        }
-        
-        withAnimation { currentPage += 1 }
-    }
-    
-    private func openFullDiskAccessSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles") {
-            NSWorkspace.shared.open(url)
         }
     }
     
     private func completeSetup() {
-        // 1. You set the flag (perfect!)
         hasCompletedSetup = true
         
-        // 2. You find the AppDelegate (perfect!)
         if let appDelegate = NSApp.delegate as? AppDelegate {
-            // 3. You call the correct function (perfect!)
             appDelegate.setupDidComplete()
         }
         
-        // 4. You close this window (perfect!)
         (NSApp.delegate as? AppDelegate)?.closeSetupWindow()
     }
 }

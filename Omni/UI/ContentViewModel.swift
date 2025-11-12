@@ -81,7 +81,7 @@ class ContentViewModel: ObservableObject {
         if let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased()) {
             
             isLoading = true
-            inputText = "" // Clear the input field
+            inputText = ""
             
             Task {
                 let tempMessage = ChatMessage(content: "Reading from \(url.host ?? "web page")...", isUser: false, sources: nil)
@@ -105,7 +105,7 @@ class ContentViewModel: ObservableObject {
                         
                         addAttachedFiles(urls: [tempFileURL])
                         isLoading = false
-                        objectWillChange.send() // Force UI to update pills
+                        objectWillChange.send()
                     }
                 } else {
                     await MainActor.run {
@@ -114,29 +114,32 @@ class ContentViewModel: ObservableObject {
                     }
                 }
             }
-            return // Stop here
+            return
         }
         
         // --- 2. Standard Message Logic ---
         
-        objectWillChange.send() // This hides the file pills
+        objectWillChange.send()
         
         let userMessageText = inputText
         
+        // START: Modified to use LibraryManager instead of GlobalSourceFile
         var allSourceURLs = currentSession.attachedFileURLs
-        var globalURLs: [URL] = []
+        var libraryFileURLs: [URL] = []
         
+        // Get library context if enabled
+        var libraryContextText = ""
         if useGlobalLibrary {
-            let descriptor = FetchDescriptor<GlobalSourceFile>()
-            if let globalFiles = try? modelContext.fetch(descriptor) {
-                globalURLs = globalFiles.compactMap { $0.getURL() }
-                for url in globalURLs {
-                    _ = url.startAccessingSecurityScopedResource()
-                }
-                allSourceURLs.append(contentsOf: globalURLs)
-            }
+            let activeFiles = LibraryManager.shared.getActiveProjectFiles()
+            libraryFileURLs = activeFiles.map { $0.url }
+            
+            // Get formatted context for AI
+            libraryContextText = LibraryManager.shared.getActiveProjectContext()
+            
+            // Add library file URLs to sources for search
+            allSourceURLs.append(contentsOf: libraryFileURLs)
         }
-
+        // END: Modified section
         
         inputText = ""
         let sourceFilePaths = allSourceURLs.map { $0.path }
@@ -161,6 +164,11 @@ class ContentViewModel: ObservableObject {
             do {
                 var context = ""
                 
+                // Add library context first if available
+                if !libraryContextText.isEmpty {
+                    context = libraryContextText + "\n\n---\n\n"
+                }
+                
                 if !allSourceURLs.isEmpty {
                     let chunks = await searchService.searchChunks(
                         query: userMessageText,
@@ -168,11 +176,10 @@ class ContentViewModel: ObservableObject {
                         modelContext: modelContext
                     )
                     
-                    if chunks.isEmpty {
+                    if chunks.isEmpty && libraryContextText.isEmpty {
                         context = "No relevant context found in the attached files for that query."
-                    } else {
-                        context = "RELEVANT CONTEXT:\n"
-                        // MODIFIED: Normalize filenames for images to treat them as regular documents
+                    } else if !chunks.isEmpty {
+                        context += "RELEVANT CONTEXT FROM SEARCH:\n"
                         context += chunks.map { chunk in
                             let displayName = normalizeFileName(chunk.fileName)
                             return "Chunk from '\(displayName)':\n\(chunk.text)"
@@ -201,10 +208,6 @@ class ContentViewModel: ObservableObject {
                     isUser: false,
                     sources: nil
                 )
-            }
-            
-            for url in globalURLs {
-                url.stopAccessingSecurityScopedResource()
             }
             
             await MainActor.run {
@@ -247,9 +250,16 @@ class ContentViewModel: ObservableObject {
         
         Task {
             do {
+                // Include library files in notebook generation if enabled
+                var allFiles = currentSession.attachedFileURLs
+                if useGlobalLibrary {
+                    let libraryFiles = LibraryManager.shared.getActiveProjectFiles()
+                    allFiles.append(contentsOf: libraryFiles.map { $0.url })
+                }
+                
                 let generatedNote = try await LLMManager.shared.generateNotebook(
                     chatHistory: Array(currentSession.messages),
-                    files: currentSession.attachedFileURLs
+                    files: allFiles
                 )
                 
                 self.notebookContent = generatedNote
@@ -270,7 +280,6 @@ class ContentViewModel: ObservableObject {
         let fileExtension = (fileName as NSString).pathExtension.lowercased()
         
         if imageExtensions.contains(fileExtension) {
-            // Replace image filenames with generic "Document" names
             return "Document.txt"
         }
         
@@ -280,7 +289,6 @@ class ContentViewModel: ObservableObject {
     /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
         let tempDirectory = FileManager.default.temporaryDirectory
-        // Sanitize file name
         let sanitizedName = fileName.replacingOccurrences(of: "[^a-zA-Z0-9.-]", with: "_", options: .regularExpression)
         let fileURL = tempDirectory.appendingPathComponent("\(sanitizedName).txt")
         

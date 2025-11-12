@@ -1,14 +1,13 @@
 import SwiftUI
-import UniformTypeIdentifiers // This import provides UTType
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @StateObject var viewModel: ContentViewModel
+    @StateObject private var libraryManager = LibraryManager.shared
     
     @FocusState private var isInputFocused: Bool
     
     @State private var isDropTarget = false
-    
-    // This state is for the 3-dot loading animation
     @State private var isAnimatingDots = false
     
     var session: ChatSession {
@@ -19,7 +18,6 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
 
-    /// Shows file pills if files are attached AND no messages have been sent yet.
     private var shouldShowFilePills: Bool {
         let hasAttachedFiles = !viewModel.currentSession.attachedFileURLs.isEmpty
         let hasMessagesWithSources = sortedMessages.contains(where: { $0.sources != nil && !$0.sources!.isEmpty })
@@ -38,6 +36,7 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 chatArea
                 filePillsArea
+                libraryIndicatorArea
                 inputArea
             }
             
@@ -105,7 +104,6 @@ struct ChatView: View {
     
     @ViewBuilder
     private var chatArea: some View {
-        // --- 🛑 FIX: The .onChange modifiers are moved INSIDE this closure ---
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 16) {
@@ -117,11 +115,8 @@ struct ChatView: View {
                         .transition(.asymmetric(insertion: .scale.combined(with: .opacity), removal: .opacity))
                     }
                     
-                    // This is the 3-dot loading animation
                     if viewModel.isLoading {
-                        // --- 🛑 FIX: Modifiers moved onto the Group ---
                         Group {
-                            // --- MODIFICATION: WRAPPED IN HSTACK + SPACER TO ALIGN LEFT ---
                             HStack {
                                 HStack(alignment: .top, spacing: 12) {
                                     VStack(alignment: .leading, spacing: 8) {
@@ -149,14 +144,14 @@ struct ChatView: View {
                                 .onDisappear { isAnimatingDots = false }
                                 .transition(.scale.combined(with: .opacity))
                                 
-                                Spacer() // <-- THIS PUSHES THE BUBBLE LEFT
+                                Spacer()
                             }
                             
                             Spacer(minLength: 100)
                         }
                     }
                 }
-                .padding(.vertical, 16) // Added vertical padding
+                .padding(.vertical, 16)
             }
             .padding(.horizontal, 20)
             .contextMenu {
@@ -166,7 +161,6 @@ struct ChatView: View {
                     Label("Clear Chat", systemImage: "trash")
                 }
             }
-            // --- 🛑 FIX: .onChange modifiers moved here, attached to ScrollView ---
             .onChange(of: session.messages.count) { _, _ in
                 if let lastMessage = sortedMessages.last {
                     withAnimation(.easeOut(duration: 0.3)) {
@@ -201,6 +195,87 @@ struct ChatView: View {
         }
     }
     
+    // NEW: Library indicator showing active project
+    @ViewBuilder
+    private var libraryIndicatorArea: some View {
+        if viewModel.useGlobalLibrary, let activeProject = libraryManager.activeProject {
+            HStack(spacing: 8) {
+                Image(systemName: "brain.head.profile")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "FF6B6B"))
+                
+                Text("Using:")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "AAAAAA"))
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "folder.fill")
+                        .font(.system(size: 10))
+                    Text(activeProject.name)
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundColor(Color(hex: "FF6B6B"))
+                
+                Text("(\(activeProject.files.count) files)")
+                    .font(.system(size: 11))
+                    .foregroundColor(Color(hex: "8A8A8A"))
+                
+                Spacer()
+                
+                Button(action: {
+                    viewModel.useGlobalLibrary = false
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "666666"))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color(hex: "FF6B6B").opacity(0.1))
+            .overlay(
+                Rectangle()
+                    .fill(Color(hex: "FF6B6B").opacity(0.3))
+                    .frame(height: 1),
+                alignment: .top
+            )
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        } else if viewModel.useGlobalLibrary && libraryManager.activeProject == nil {
+            // Show warning if brain is on but no project is active
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.orange)
+                
+                Text("No active project. Enable a project in Library settings.")
+                    .font(.system(size: 12))
+                    .foregroundColor(Color(hex: "AAAAAA"))
+                
+                Spacer()
+                
+                Button(action: {
+                    viewModel.useGlobalLibrary = false
+                }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(Color(hex: "666666"))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(Color.orange.opacity(0.1))
+            .overlay(
+                Rectangle()
+                    .fill(Color.orange.opacity(0.3))
+                    .frame(height: 1),
+                alignment: .top
+            )
+            .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+    
     @ViewBuilder
     private var inputArea: some View {
         VStack(spacing: 0) {
@@ -215,20 +290,35 @@ struct ChatView: View {
                 .help("Attach files")
                 
                 Button(action: {
-                    viewModel.useGlobalLibrary.toggle()
+                    withAnimation {
+                        viewModel.useGlobalLibrary.toggle()
+                    }
                 }) {
-                    Image(systemName: "brain")
-                        .font(.system(size: 18))
-                        .foregroundColor(viewModel.useGlobalLibrary ? Color(hex: "FF6B6B") : Color(hex: "666666"))
-                        .shadow(
-                            color: viewModel.useGlobalLibrary ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
-                            radius: viewModel.useGlobalLibrary ? 6 : 0,
-                            x: 0, y: 0
-                        )
-                        .animation(.easeInOut(duration: 0.2), value: viewModel.useGlobalLibrary)
+                    ZStack {
+                        Image(systemName: "brain")
+                            .font(.system(size: 18))
+                            .foregroundColor(viewModel.useGlobalLibrary ? Color(hex: "FF6B6B") : Color(hex: "666666"))
+                            .shadow(
+                                color: viewModel.useGlobalLibrary ? Color(hex: "FF6B6B").opacity(0.7) : Color.clear,
+                                radius: viewModel.useGlobalLibrary ? 6 : 0,
+                                x: 0, y: 0
+                            )
+                        
+                        // Show badge if project is active
+                        if let activeProject = libraryManager.activeProject, viewModel.useGlobalLibrary {
+                            Circle()
+                                .fill(Color(hex: "FF6B6B"))
+                                .frame(width: 8, height: 8)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color(hex: "1A1A1A"), lineWidth: 1.5)
+                                )
+                                .offset(x: 8, y: -8)
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
-                .help(viewModel.useGlobalLibrary ? "Stop using Global Library" : "Include Global Library in context")
+                .help(brainButtonHelp)
                 
                 HStack(spacing: 8) {
                     Image(systemName: "text.cursor")
@@ -290,7 +380,19 @@ struct ChatView: View {
         .transition(.opacity)
     }
     
-    // MARK: - Helper Functions
+    // MARK: - Helper Properties & Functions
+    
+    private var brainButtonHelp: String {
+        if let activeProject = libraryManager.activeProject {
+            if viewModel.useGlobalLibrary {
+                return "Stop using '\(activeProject.name)' (\(activeProject.files.count) files)"
+            } else {
+                return "Include '\(activeProject.name)' (\(activeProject.files.count) files) in context"
+            }
+        } else {
+            return "No active library project. Enable one in Settings → Library"
+        }
+    }
     
     func presentFilePicker() {
         let openPanel = NSOpenPanel()
