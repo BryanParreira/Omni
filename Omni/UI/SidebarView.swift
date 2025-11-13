@@ -124,6 +124,8 @@ struct SidebarView: View {
         }
     }
     
+    // MARK: - Private Methods
+    
     private func createNewChat() {
         let newSession = ChatSession(title: "New Chat")
         modelContext.insert(newSession)
@@ -135,16 +137,35 @@ struct SidebarView: View {
         )
         newSession.messages.append(welcomeMessage)
         
-        try? modelContext.save()
+        saveChanges() // Use new save function
         selectedSession = newSession
     }
     
     private func deleteSession(_ session: ChatSession) {
+        // --- 1. Improved Delete Behavior ---
+        // Check if the deleted session is the selected one
         if selectedSession == session {
-            selectedSession = nil
+            // Get the current list of sessions (respecting the query's sort order)
+            let sessions = self.chatSessions
+            if let currentIndex = sessions.firstIndex(of: session) {
+                if sessions.count == 1 {
+                    // It was the last session
+                    selectedSession = nil
+                } else if currentIndex == 0 {
+                    // It was the first item, select the next one (at index 1)
+                    selectedSession = sessions[1]
+                } else {
+                    // It was not the first, select the previous one
+                    selectedSession = sessions[currentIndex - 1]
+                }
+            } else {
+                selectedSession = nil // Fallback
+            }
         }
+        
+        // Perform the deletion
         modelContext.delete(session)
-        try? modelContext.save()
+        saveChanges() // Use new save function
     }
     
     private func startRename(session: ChatSession) {
@@ -161,11 +182,22 @@ struct SidebarView: View {
         
         if !renameText.isEmpty {
             session.title = renameText
-            try? modelContext.save()
+            saveChanges() // Use new save function
         }
         
         renamingSession = nil
         renameText = ""
+    }
+    
+    // --- 2. Robust Error Handling ---
+    private func saveChanges() {
+        do {
+            try modelContext.save()
+        } catch {
+            // This is a great place to log the error
+            print("Error saving model context: \(error.localizedDescription)")
+            // You could also show an alert to the user here
+        }
     }
 }
 
@@ -228,28 +260,27 @@ struct ChatSessionRow: View {
                             .lineLimit(1)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         
-                        // Show 3-dot menu on hover
-                        if isHovered {
-                            Menu {
-                                Button(action: onRename) {
-                                    Label("Rename", systemImage: "pencil")
-                                }
-                                
-                                Divider()
-                                
-                                Button(role: .destructive, action: onDelete) {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            } label: {
-                                Image(systemName: "ellipsis")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color(hex: "666666"))
-                                    .frame(width: 20, height: 20)
+                        // --- 3. Fix Row Layout "Jump" ---
+                        // The Menu is now always in the layout, but hidden with opacity
+                        Menu {
+                            Button(action: onRename) {
+                                Label("Rename", systemImage: "pencil")
                             }
-                            .menuIndicator(.hidden)
-                            .menuStyle(.borderlessButton)
-                            .transition(.opacity)
+                            
+                            Divider()
+                            
+                            Button(role: .destructive, action: onDelete) {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis")
+                                .font(.system(size: 12))
+                                .foregroundColor(Color(hex: "666666"))
+                                .frame(width: 20, height: 20)
                         }
+                        .menuIndicator(.hidden)
+                        .menuStyle(.borderlessButton)
+                        .opacity(isHovered ? 1.0 : 0.0) // Use opacity
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -285,6 +316,6 @@ struct ChatSessionRow: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isSelected)
-        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .animation(.easeInOut(duration: 0.15), value: isHovered) // This animates hover bg and opacity
     }
-}
+} 
