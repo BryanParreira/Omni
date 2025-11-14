@@ -1,139 +1,183 @@
 import SwiftUI
 
 struct LibrarySettingsView: View {
+    @Environment(\.modelContext) private var modelContext // <-- 1. Add Model Context
     @StateObject private var libraryManager = LibraryManager.shared
+    
+    // --- 2. Add Bindings for Notebook ---
+    // You must pass these in from your parent view (e.g., ContentView)
+    @Binding var noteContent: String
+    @Binding var isShowingNotebook: Bool
+    
     @State private var showingNewProjectSheet = false
     @State private var newProjectName = ""
     @State private var selectedProject: Project?
     @State private var showingRenameAlert = false
     @State private var renameText = ""
     
+    // --- 3. Add State for New Features ---
+    @State private var generatedQuiz: Quiz?
+    @State private var isShowingQuiz = false
+    @State private var isGenerating: Bool = false // For loading
+    @State private var generationStatus: String = "Generating..."
+
     var body: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 14) {
-                // Header card
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Library Projects")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                        Text("Organize files for AI context")
-                            .font(.system(size: 12))
-                            .foregroundColor(Color(hex: "777777"))
-                    }
-                    
-                    Spacer()
-                    
-                    Button(action: { showingNewProjectSheet = true }) {
-                        HStack(spacing: 6) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text("New Project")
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(
-                            LinearGradient(
-                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(6)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(16)
-                .background(Color(hex: "222222"))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
-                )
-                
-                // Projects List
-                if libraryManager.projects.isEmpty {
-                    VStack(spacing: 14) {
-                        Image(systemName: "folder.badge.plus")
-                            .font(.system(size: 36))
-                            .foregroundColor(Color(hex: "FF6B6B"))
-                        
-                        VStack(spacing: 6) {
-                            Text("No projects yet")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(Color(hex: "EAEAEA"))
-                            Text("Create a project to organize your files")
+        ZStack { // <-- 4. Add ZStack for loading overlay
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 14) {
+                    // Header card
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Library Projects")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            Text("Organize files for AI context")
                                 .font(.system(size: 12))
-                                .foregroundColor(Color(hex: "888888"))
+                                .foregroundColor(Color(hex: "777777"))
                         }
+                        
+                        Spacer()
+                        
+                        Button(action: { showingNewProjectSheet = true }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text("New Project")
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(
+                                LinearGradient(
+                                    colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
+                    .padding(16)
                     .background(Color(hex: "222222"))
                     .cornerRadius(10)
                     .overlay(
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
                     )
-                } else {
-                    VStack(spacing: 10) {
-                        ForEach(libraryManager.projects) { project in
-                            ProjectRow(
-                                project: project,
-                                onToggle: {
-                                    libraryManager.toggleProjectActive(project)
-                                },
-                                onRename: {
-                                    selectedProject = project
-                                    renameText = project.name
-                                    showingRenameAlert = true
-                                },
-                                onDelete: {
-                                    libraryManager.deleteProject(project)
-                                },
-                                onAddFiles: {
-                                    selectFiles(for: project)
-                                },
-                                onRemoveFile: { file in
-                                    libraryManager.removeFile(file, from: project)
-                                }
-                            )
+                    
+                    // Projects List
+                    if libraryManager.projects.isEmpty {
+                        VStack(spacing: 14) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 36))
+                                .foregroundColor(Color(hex: "FF6B6B"))
+                            
+                            VStack(spacing: 6) {
+                                Text("No projects yet")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(Color(hex: "EAEAEA"))
+                                Text("Create a project to organize your files")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(hex: "888888"))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                        .background(Color(hex: "222222"))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                        )
+                    } else {
+                        VStack(spacing: 10) {
+                            ForEach(libraryManager.projects) { project in
+                                ProjectRow(
+                                    project: project,
+                                    onToggle: {
+                                        libraryManager.toggleProjectActive(project)
+                                    },
+                                    onRename: {
+                                        selectedProject = project
+                                        renameText = project.name
+                                        showingRenameAlert = true
+                                    },
+                                    onDelete: {
+                                        libraryManager.deleteProject(project)
+                                    },
+                                    onAddFiles: {
+                                        selectFiles(for: project)
+                                    },
+                                    onRemoveFile: { file in
+                                        libraryManager.removeFile(file, from: project)
+                                    },
+                                    // --- 5. Pass actions to ProjectRow ---
+                                    onGenerateQuiz: {
+                                        Task { await handleGenerateQuiz(for: project) }
+                                    },
+                                    onGenerateTimeline: {
+                                        Task { await handleGenerateTimeline(for: project) }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
+                .padding(24)
             }
-            .padding(24)
-        }
-        .sheet(isPresented: $showingNewProjectSheet) {
-            NewProjectSheet(
-                projectName: $newProjectName,
-                onCreate: {
-                    libraryManager.createProject(name: newProjectName)
-                    newProjectName = ""
-                    showingNewProjectSheet = false
-                },
-                onCancel: {
-                    newProjectName = ""
-                    showingNewProjectSheet = false
+            .sheet(isPresented: $showingNewProjectSheet) {
+                // This sheet will now be found
+                NewProjectSheet(
+                    projectName: $newProjectName,
+                    onCreate: {
+                        libraryManager.createProject(name: newProjectName)
+                        newProjectName = ""
+                        showingNewProjectSheet = false
+                    },
+                    onCancel: {
+                        newProjectName = ""
+                        showingNewProjectSheet = false
+                    }
+                )
+            }
+            .alert("Rename Project", isPresented: $showingRenameAlert) {
+                TextField("Project Name", text: $renameText)
+                Button("Cancel", role: .cancel) {
+                    selectedProject = nil
+                    renameText = ""
                 }
-            )
-        }
-        .alert("Rename Project", isPresented: $showingRenameAlert) {
-            TextField("Project Name", text: $renameText)
-            Button("Cancel", role: .cancel) {
-                selectedProject = nil
-                renameText = ""
-            }
-            Button("Rename") {
-                if let project = selectedProject, !renameText.isEmpty {
-                    libraryManager.renameProject(project, newName: renameText)
+                Button("Rename") {
+                    if let project = selectedProject, !renameText.isEmpty {
+                        libraryManager.renameProject(project, newName: renameText)
+                    }
+                    selectedProject = nil
+                    renameText = ""
                 }
-                selectedProject = nil
-                renameText = ""
+            }
+            // --- 6. Add sheet for QuizView ---
+            .sheet(item: $generatedQuiz) { quiz in
+                QuizView(quiz: quiz)
+            }
+            
+            // --- 7. Add Loading Overlay ---
+            if isGenerating {
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.2)
+                    Text(generationStatus)
+                        .font(.system(size: 13))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                }
+                .padding(30)
+                .background(Color(hex: "1A1A1A").opacity(0.9))
+                .cornerRadius(12)
+                .shadow(radius: 10)
+                .transition(.opacity.animation(.easeInOut))
             }
         }
+        .animation(.easeInOut, value: isGenerating)
     }
     
     private func selectFiles(for project: Project) {
@@ -155,6 +199,34 @@ struct LibrarySettingsView: View {
             }
         }
     }
+    
+    // --- 8. Add Handler Functions ---
+    private func handleGenerateQuiz(for project: Project) async {
+        isGenerating = true
+        generationStatus = "Generating quiz..."
+        do {
+            let quiz = try await LLMManager.shared.generateExam(from: project, modelContext: modelContext)
+            self.generatedQuiz = quiz // This triggers the sheet
+        } catch {
+            print("Error generating quiz: \(error)")
+            // TODO: Show an error alert to the user
+        }
+        isGenerating = false
+    }
+    
+    private func handleGenerateTimeline(for project: Project) async {
+        isGenerating = true
+        generationStatus = "Generating timeline..."
+        do {
+            let timelineMarkdown = try await LLMManager.shared.generateTimeline(from: project)
+            self.noteContent = timelineMarkdown // Set the content
+            self.isShowingNotebook = true       // Show the notebook
+        } catch {
+            print("Error generating timeline: \(error)")
+            // TODO: Show an error alert to the user
+        }
+        isGenerating = false
+    }
 }
 
 // MARK: - Project Row
@@ -165,6 +237,9 @@ struct ProjectRow: View {
     let onDelete: () -> Void
     let onAddFiles: () -> Void
     let onRemoveFile: (LibraryFile) -> Void
+    // --- 9. Add action properties ---
+    let onGenerateQuiz: () -> Void
+    let onGenerateTimeline: () -> Void
     
     @State private var isExpanded = false
     @State private var isHovered = false
@@ -258,6 +333,33 @@ struct ProjectRow: View {
                         lineWidth: 1
                     )
             )
+            // --- 10. Add Context Menu ---
+            .contextMenu {
+                Button(action: onAddFiles) {
+                    Label("Add Files...", systemImage: "plus")
+                }
+                
+                Divider()
+                
+                Button(action: onGenerateQuiz) {
+                    Label("Generate Practice Exam", systemImage: "questionmark.diamond")
+                }
+                .disabled(project.files.isEmpty) // Can't generate from nothing
+                
+                Button(action: onGenerateTimeline) {
+                    Label("Generate Project Timeline", systemImage: "calendar.day.timeline.leading")
+                }
+                .disabled(project.files.isEmpty)
+                
+                Divider()
+                
+                Button(action: onRename) {
+                    Label("Rename Project", systemImage: "pencil")
+                }
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete Project", systemImage: "trash")
+                }
+            }
             
             // Files List (when expanded)
             if isExpanded {
@@ -302,10 +404,12 @@ struct ProjectRow: View {
                 .padding(.bottom, 8)
             }
         }
+        .animation(.easeOut(duration: 0.2), value: isExpanded)
     }
 }
 
 // MARK: - New Project Sheet
+// This struct is now included, fixing the "Cannot find" error.
 struct NewProjectSheet: View {
     @Binding var projectName: String
     let onCreate: () -> Void
@@ -317,7 +421,7 @@ struct NewProjectSheet: View {
                 Text("New Project")
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(.white)
-                
+            
                 Text("Create a project to organize files")
                     .font(.system(size: 12))
                     .foregroundColor(Color(hex: "888888"))
@@ -331,7 +435,7 @@ struct NewProjectSheet: View {
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                        .stroke(Color(hex:"2A2A2A"), lineWidth: 1)
                 )
                 .frame(width: 300)
             

@@ -12,11 +12,21 @@ struct ContentView: View {
     
     @State private var selectedSession: ChatSession?
     
+    // --- 1. ADD STATE FOR NOTEBOOK ---
+    // This state is now "lifted" to the main view,
+    // so it can be shared by the Sidebar, Settings, and Notebook.
+    @State private var noteContent: String = ""
+    @State private var isShowingNotebook: Bool = false
+    
     var body: some View {
         NavigationSplitView {
-            // --- SIDEBAR ---
-            SidebarView(selectedSession: $selectedSession)
-                .frame(width: 200) // Lock the sidebar width
+            // --- 2. PASS BINDINGS TO SIDEBAR ---
+            SidebarView(
+                selectedSession: $selectedSession,
+                noteContent: $noteContent,
+                isShowingNotebook: $isShowingNotebook
+            )
+            .frame(width: 200) // Lock the sidebar width
         } detail: {
             // --- DETAIL (CHAT) ---
             NavigationStack {
@@ -49,11 +59,22 @@ struct ContentView: View {
                                 .foregroundColor(Color(hex: "AAAAAA"))
                         }
                         
+                        // This uses the StyledButton from SettingsView
+                        // If it's not available here, you may need to move it
+                        // or use a regular Button.
+                        /*
                         StyledButton(
                             title: "Create New Chat",
                             systemImage: "plus",
                             action: createFirstChat
                         )
+                        .padding(.top, 8)
+                        */
+                        
+                        // Using a standard button for now
+                        Button(action: createFirstChat) {
+                            Label("Create New Chat", systemImage: "plus")
+                        }
                         .padding(.top, 8)
                         
                     }
@@ -93,6 +114,13 @@ struct ContentView: View {
                     print("❌ CRITICAL: Failed to find new session in context.")
                 }
             }
+        }
+        // --- 3. ADD SHEET FOR NOTEBOOK VIEW ---
+        .sheet(isPresented: $isShowingNotebook) {
+            NotebookView(
+                noteContent: $noteContent,
+                isShowing: $isShowingNotebook
+            )
         }
     }
     

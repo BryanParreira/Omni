@@ -167,6 +167,11 @@ struct SettingsView: View {
     @State private var showSuccessMessage = false
     @State private var currentTab: SettingsTab = .general
     
+    // --- 1. ADD THESE BINDINGS ---
+    // These are passed in from SidebarView
+    @Binding var noteContent: String
+    @Binding var isShowingNotebook: Bool
+    
     var body: some View {
         VStack(spacing: 0) {
             // Clean header
@@ -223,7 +228,11 @@ struct SettingsView: View {
                             showSuccessMessage: $showSuccessMessage
                         )
                     case .library:
-                        LibrarySettingsView()
+                        // --- 2. PASS THE BINDINGS DOWN ---
+                        LibrarySettingsView(
+                            noteContent: $noteContent,
+                            isShowingNotebook: $isShowingNotebook
+                        )
                     case .about:
                         AboutView()
                     }

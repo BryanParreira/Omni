@@ -9,6 +9,11 @@ struct SidebarView: View {
     
     @Binding var selectedSession: ChatSession?
     
+    // --- 1. ADD THESE BINDINGS ---
+    // These will be passed in from your ContentView
+    @Binding var noteContent: String
+    @Binding var isShowingNotebook: Bool
+    
     @State private var renamingSession: ChatSession? = nil
     @State private var renameText: String = ""
     @FocusState private var isRenameFieldFocused: Bool
@@ -120,7 +125,11 @@ struct SidebarView: View {
         }
         .background(Color(hex: "1E1E1E"))
         .sheet(isPresented: $isShowingSettings) {
-            SettingsView()
+            // --- 2. PASS THE BINDINGS TO SETTINGS VIEW ---
+            SettingsView(
+                noteContent: $noteContent,
+                isShowingNotebook: $isShowingNotebook
+            )
         }
     }
     
@@ -318,4 +327,4 @@ struct ChatSessionRow: View {
         .animation(.easeInOut(duration: 0.2), value: isSelected)
         .animation(.easeInOut(duration: 0.15), value: isHovered) // This animates hover bg and opacity
     }
-} 
+}
