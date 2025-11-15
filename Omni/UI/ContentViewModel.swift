@@ -20,7 +20,7 @@ class ContentViewModel: ObservableObject {
     
     // --- 1. REMOVED ---
     // @Published var useGlobalLibrary: Bool = false
-    // This is no longer needed, as the project is tied to the session.
+    // This is no longer needed. The attached project is per-session.
     
     private var fileIndexer: FileIndexer
     private let searchService = FileSearchService()
@@ -76,7 +76,7 @@ class ContentViewModel: ObservableObject {
     }
     
     // --- 2. NEW FUNCTION ---
-    // This function is called by the new "brain" menu in ChatView
+    /// This function is called by the new "brain" menu in ChatView
     func setAttachedProject(_ project: Project?) {
         objectWillChange.send()
         currentSession.attachedProjectID = project?.id
@@ -133,10 +133,12 @@ class ContentViewModel: ObservableObject {
         objectWillChange.send()
         
         let userMessageText = inputText
-        var allSourceURLs = currentSession.attachedFileURLs
-        var libraryContextText = ""
+        var allSourceURLs = currentSession.attachedFileURLs // Start with manually attached files
+        var libraryContextText = "" // This will hold the full text of library files
         
         // --- This is the new logic ---
+        var projectSystemPrompt: String? = nil // Our new variable
+        
         // Check if a project is attached *to this session*
         if let projectID = currentSession.attachedProjectID {
             // Get the project from the LibraryManager
@@ -146,10 +148,17 @@ class ContentViewModel: ObservableObject {
                 // Get the formatted context string to send to the AI
                 libraryContextText = LibraryManager.shared.getContext(for: project)
                 
-                // Add library file URLs so they can be searched
+                // Add library file URLs so they can be searched for RAG
                 allSourceURLs.append(contentsOf: projectFiles)
+                
+                // --- GET THE CUSTOM PROMPT ---
+                if !project.systemPrompt.isEmpty {
+                    projectSystemPrompt = project.systemPrompt
+                }
             }
         }
+        
+        // --- End of new logic ---
         
         inputText = ""
         let sourceFilePaths = allSourceURLs.map { $0.path }
@@ -202,10 +211,12 @@ class ContentViewModel: ObservableObject {
                 
                 let chatHistory = Array(currentSession.messages)
                 
+                // --- 4. PASS THE CUSTOM PROMPT TO THE LLM ---
                 let aiResponse = try await LLMManager.shared.generateResponse(
                     chatHistory: chatHistory,
                     context: context,
-                    files: allSourceURLs // Pass all files for the smart prompt
+                    files: allSourceURLs,
+                    customSystemPrompt: projectSystemPrompt // Pass the new prompt
                 )
                 
                 botMessage = ChatMessage(
@@ -251,7 +262,7 @@ class ContentViewModel: ObservableObject {
         
         currentSession.attachedFileURLs = []
         
-        // --- 4. CLEAR ATTACHED PROJECT ---
+        // --- 5. CLEAR ATTACHED PROJECT ---
         currentSession.attachedProjectID = nil
         
         try? modelContext.save()
@@ -266,30 +277,41 @@ class ContentViewModel: ObservableObject {
         
         Task {
             do {
-                // --- 5. UPDATED NOTEBOOK LOGIC ---
+                // --- 6. UPDATED NOTEBOOK LOGIC ---
                 var allFiles = currentSession.attachedFileURLs
+                var projectSystemPrompt: String? = nil
+                
                 if let projectID = currentSession.attachedProjectID,
                    let project = LibraryManager.shared.getProject(by: projectID) {
                     allFiles.append(contentsOf: project.files.map { $0.url })
+                    if !project.systemPrompt.isEmpty {
+                        projectSystemPrompt = project.systemPrompt
+                    }
                 }
                 
                 let generatedNote = try await LLMManager.shared.generateNotebook(
                     chatHistory: Array(currentSession.messages),
-                    files: allFiles
+                    files: allFiles,
+                    customSystemPrompt: projectSystemPrompt // Pass custom prompt
                 )
                 
-                self.notebookContent = generatedNote
-                self.isGeneratingNotebook = false
+                await MainActor.run {
+                    self.notebookContent = generatedNote
+                    self.isGeneratingNotebook = false
+                }
                 
             } catch {
-                self.notebookContent = "Sorry, an error occurred while generating the notebook:\n\n\(error.localizedDescription)"
-                self.isGeneratingNotebook = false
+                await MainActor.run {
+                    self.notebookContent = "Sorry, an error occurred while generating the notebook:\n\n\(error.localizedDescription)"
+                    self.isGeneratingNotebook = false
+                }
             }
         }
     }
     
     // MARK: - Private Helpers
     
+    /// Normalizes filenames so images appear as generic documents to the AI
     private func normalizeFileName(_ fileName: String) -> String {
         let imageExtensions = ["jpg", "jpeg", "png", "heic", "tiff", "gif", "bmp"]
         let fileExtension = (fileName as NSString).pathExtension.lowercased()
@@ -301,6 +323,7 @@ class ContentViewModel: ObservableObject {
         return fileName
     }
     
+    /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
         let tempDirectory = FileManager.default.temporaryDirectory
         let sanitizedName = fileName.replacingOccurrences(of: "[^a-zA-Z0-9.-]", with: "_", options: .regularExpression)

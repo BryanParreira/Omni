@@ -13,7 +13,7 @@ struct ChatView: View {
     @State private var brainButtonHovered = false
     @State private var sendButtonHovered = false
     @State private var showScrollToBottom = false
-    @State private var showBrainMenu = false
+    @State private var showBrainMenu = false // This controls your popover
     
     var session: ChatSession {
         viewModel.currentSession
@@ -23,6 +23,8 @@ struct ChatView: View {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
     }
     
+    // --- 1. NEW COMPUTED PROPERTY ---
+    // Finds the attached project from the LibraryManager
     private var attachedProject: Project? {
         guard let projectID = viewModel.currentSession.attachedProjectID else { return nil }
         return libraryManager.getProject(by: projectID)
@@ -43,7 +45,11 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 chatArea
                 filePillsArea
+                
+                // --- 2. UPDATED INDICATOR AREA ---
+                // This now shows the project attached to the session
                 projectIndicatorArea
+                
                 inputArea
             }
             
@@ -131,7 +137,7 @@ struct ChatView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 12)
                         
-                        Spacer(minLength: 80)
+                        Spacer(minLength: 80) // Space for input bar
                     }
                 }
             }
@@ -187,7 +193,7 @@ struct ChatView: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundColor(Color(hex: "EAEAEA"))
                 
-                Text("Ask me anything or upload files to get started")
+                Text("Ask me anything, attach files, or connect a Library Project.")
                     .font(.system(size: 14))
                     .foregroundColor(Color(hex: "888888"))
             }
@@ -248,6 +254,8 @@ struct ChatView: View {
     
     @ViewBuilder
     private var projectIndicatorArea: some View {
+        // --- 3. UPDATED LOGIC ---
+        // This now shows the *session's* attached project
         if let project = attachedProject {
             HStack(spacing: 10) {
                 Image(systemName: "brain.fill")
@@ -310,7 +318,8 @@ struct ChatView: View {
                         attachButtonHovered = hovering
                     }
                     
-                    // Brain menu with improved UI and popover
+                    // --- 4. THIS IS YOUR PREFERRED BRAIN BUTTON ---
+                    // It is now wired to the new logic
                     Button(action: { showBrainMenu.toggle() }) {
                         Image(systemName: attachedProject != nil ? "brain.fill" : "brain")
                             .font(.system(size: 16, weight: .medium))
@@ -341,14 +350,14 @@ struct ChatView: View {
                             .animation(.easeOut(duration: 0.15), value: brainButtonHovered)
                     }
                     .buttonStyle(.plain)
-                    .help(brainButtonHelp)
+                    .help(brainButtonHelp) // This help text is now dynamic
                     .onHover { hovering in
                         brainButtonHovered = hovering
                     }
                     .popover(isPresented: $showBrainMenu, arrowEdge: .top) {
                         BrainMenuPopover(
                             projects: libraryManager.projects,
-                            attachedProject: attachedProject,
+                            attachedProject: attachedProject, // Pass the new computed property
                             onSelectProject: { project in
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     viewModel.setAttachedProject(project)
@@ -486,10 +495,11 @@ struct ChatView: View {
     // MARK: - Helper Properties & Functions
     
     private var brainButtonHelp: String {
+        // --- 5. UPDATED HELP TEXT ---
         if let project = attachedProject {
-            return "Using '\(project.name)'. Click to change or detach."
+            return "Using '\(project.name)' (\(project.files.count) files). Click to change."
         } else {
-            return "Attach a Library Project to this chat"
+            return "Attach a Library Project"
         }
     }
     
@@ -748,7 +758,7 @@ struct ProjectMenuItem: View {
                         )
                         .frame(width: 36, height: 36)
                     
-                    Image(systemName: project.isActive ? "folder.fill" : "folder")
+                    Image(systemName: "folder.fill") // Always show 'folder.fill'
                         .font(.system(size: 14, weight: .medium))
                         .foregroundColor(
                             isAttached || isHovered

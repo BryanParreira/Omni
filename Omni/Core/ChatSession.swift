@@ -24,8 +24,6 @@ final class ChatSession {
         self.attachedProjectID = nil // Initialize the new property
     }
     
-    // 2. We use JSONEncoder/Decoder. This is 100% reliable.
-    //    It avoids all the 'NSKeyedArchiver' bugs.
     var attachedFileURLs: [URL] {
         get {
             // Decodes the Data back into an array of URLs

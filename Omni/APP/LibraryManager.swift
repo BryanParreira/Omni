@@ -9,13 +9,44 @@ struct Project: Identifiable, Codable, Equatable {
     var files: [LibraryFile]
     var createdAt: Date
     
-    init(id: UUID = UUID(), name: String, isActive: Bool = false, files: [LibraryFile] = []) {
+    // --- 1. ADD THIS NEW PROPERTY ---
+    var systemPrompt: String
+
+    init(id: UUID = UUID(), name: String, isActive: Bool = false, files: [LibraryFile] = [], systemPrompt: String = "") { // Add to init
         self.id = id
         self.name = name
         self.isActive = isActive
         self.files = files
         self.createdAt = Date()
+        self.systemPrompt = systemPrompt // Add to init
     }
+    
+    // --- 2. UPDATE CODABLE CONFORMANCE ---
+    enum CodingKeys: String, CodingKey {
+        case id, name, isActive, files, createdAt, systemPrompt // Add new key
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        isActive = try container.decode(Bool.self, forKey: .isActive)
+        files = try container.decode([LibraryFile].self, forKey: .files)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        // This safely decodes the new prompt, defaulting to "" if it's missing (for old data)
+        systemPrompt = try container.decodeIfPresent(String.self, forKey: .systemPrompt) ?? ""
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(name, forKey: .name)
+        try container.encode(isActive, forKey: .isActive)
+        try container.encode(files, forKey: .files)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(systemPrompt, forKey: .systemPrompt) // Add new key
+    }
+    // --- END OF CODABLE UPDATES ---
 }
 
 struct LibraryFile: Identifiable, Codable, Equatable {
@@ -48,16 +79,14 @@ class LibraryManager: ObservableObject {
         loadProjects()
     }
     
-    // MARK: - New Chat-Specific Helpers
+    // MARK: - Chat-Specific Helpers
     
     /// Finds and returns a project by its unique ID.
-    /// This is used by ContentViewModel to find the project attached to a chat session.
     func getProject(by id: UUID) -> Project? {
         return projects.first(where: { $0.id == id })
     }
     
     /// Generates the full-text context for a *specific* project.
-    /// This is the new way to get context for a single chat session.
     func getContext(for project: Project) -> String {
         let files = project.files
         guard !files.isEmpty else { return "" }
@@ -66,7 +95,6 @@ class LibraryManager: ObservableObject {
         
         for file in files {
             context += "## File: \(file.name)\n\n"
-            // We use the 'content' property you already have in your model
             context += "\(file.content)\n\n"
             context += "---\n\n"
         }
@@ -93,26 +121,24 @@ class LibraryManager: ObservableObject {
         }
     }
     
+    // This logic is now "legacy" but we leave it so the Settings view doesn't break
     func setActiveProject(_ project: Project) {
-        // Deactivate all projects first
         for index in projects.indices {
             projects[index].isActive = false
         }
         
-        // Activate the selected project
         if let index = projects.firstIndex(where: { $0.id == project.id }) {
             projects[index].isActive = true
             saveProjects()
         }
     }
     
+    // This logic is now "legacy" but we leave it so the Settings view doesn't break
     func toggleProjectActive(_ project: Project) {
         if let index = projects.firstIndex(where: { $0.id == project.id }) {
             if projects[index].isActive {
-                // If turning off, just deactivate
                 projects[index].isActive = false
             } else {
-                // If turning on, deactivate all others first
                 for i in projects.indices {
                     projects[i].isActive = false
                 }
@@ -122,7 +148,7 @@ class LibraryManager: ObservableObject {
         }
     }
     
-    // This is still used by your Settings view
+    // This logic is now "legacy"
     var activeProject: Project? {
         projects.first { $0.isActive }
     }
@@ -131,7 +157,6 @@ class LibraryManager: ObservableObject {
     func addFile(to project: Project, url: URL) {
         guard let index = projects.firstIndex(where: { $0.id == project.id }) else { return }
         
-        // Start accessing security-scoped resource
         guard url.startAccessingSecurityScopedResource() else {
             print("Couldn't access security scoped resource")
             return
@@ -142,7 +167,6 @@ class LibraryManager: ObservableObject {
             let content = try String(contentsOf: url, encoding: .utf8)
             let newFile = LibraryFile(name: url.lastPathComponent, url: url, content: content)
             
-            // Check if file already exists
             if !projects[index].files.contains(where: { $0.url == url }) {
                 projects[index].files.append(newFile)
                 saveProjects()
@@ -158,12 +182,13 @@ class LibraryManager: ObservableObject {
         saveProjects()
     }
     
-    // Get all files from active project for chat context (Old logic, still used by old VM code)
+    // This logic is now "legacy"
     func getActiveProjectFiles() -> [LibraryFile] {
         guard let active = activeProject else { return [] }
         return active.files
     }
     
+    // This logic is now "legacy"
     func getActiveProjectContext() -> String {
         let files = getActiveProjectFiles()
         guard !files.isEmpty else { return "" }
@@ -178,7 +203,9 @@ class LibraryManager: ObservableObject {
     }
     
     // MARK: - Persistence
-    private func saveProjects() {
+    // --- 3. RENAMED saveProjects() TO BE PUBLIC ---
+    // We need to call this from the TextEditor in LibrarySettingsView
+    func saveProjects() {
         do {
             let data = try JSONEncoder().encode(projects)
             UserDefaults.standard.set(data, forKey: projectsKey)
@@ -189,8 +216,7 @@ class LibraryManager: ObservableObject {
     
     private func loadProjects() {
         guard let data = UserDefaults.standard.data(forKey: projectsKey) else {
-            // Create a default project if none exist
-            projects = [Project(name: "Default Project", isActive: false)] // Changed default to false
+            projects = [Project(name: "Default Project", isActive: false)]
             saveProjects()
             return
         }

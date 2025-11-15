@@ -1,5 +1,5 @@
 import Foundation
-import SwiftData // <-- Add this import
+import SwiftData
 
 enum LLMMode {
     case openAI
@@ -56,7 +56,6 @@ class LLMManager {
     Respond ONLY with the Markdown-formatted note. Do not add any conversational text.
     """
     
-    // --- 1. NEW SYSTEM PROMPT (EXAM) ---
     private let examSystemPrompt = """
     You are an expert exam creator. You will be given a large context from one or more documents.
     Your task is to generate a challenging, high-quality practice exam based *only* on the provided text.
@@ -79,7 +78,6 @@ class LLMManager {
     Generate 5 questions.
     """
     
-    // --- 2. NEW SYSTEM PROMPT (TIMELINE) ---
     private let timelineSystemPrompt = """
     You are an expert project analyst and historian. You will be given context from one or more documents.
     Your task is to scan the text for any events, dates, milestones, or key decisions and organize them into a chronological timeline.
@@ -108,13 +106,19 @@ class LLMManager {
     
     // MARK: - Public API
     
-    /// Generates a standard chat response, now returning a simple String.
-    func generateResponse(chatHistory: [ChatMessage], context: String, files: [URL]) async throws -> String {
+    /// Generates a standard chat response.
+    func generateResponse(chatHistory: [ChatMessage],
+                          context: String,
+                          files: [URL],
+                          customSystemPrompt: String? = nil) async throws -> String {
         
         let responseText: String
         var messages: [OpenAIMessage] = []
         
-        let systemPrompt = files.isEmpty ? generalSystemPrompt : generateSmartPrompt(for: files)
+        // Use the custom prompt if it exists, otherwise use the default.
+        let baseSystemPrompt = files.isEmpty ? generalSystemPrompt : generateSmartPrompt(for: files)
+        let systemPrompt = customSystemPrompt ?? baseSystemPrompt
+        
         messages.append(OpenAIMessage(role: "system", content: systemPrompt))
         
         if !context.isEmpty {
@@ -165,11 +169,15 @@ class LLMManager {
     }
     
     /// Generates a full notebook summary from a chat history.
-    func generateNotebook(chatHistory: [ChatMessage], files: [URL]) async throws -> String {
+    func generateNotebook(chatHistory: [ChatMessage],
+                          files: [URL],
+                          customSystemPrompt: String? = nil) async throws -> String {
         
         var messages: [OpenAIMessage] = []
         
-        messages.append(OpenAIMessage(role: "system", content: notebookSystemPrompt))
+        // Use the custom prompt if it exists, otherwise use the notebook prompt
+        let systemPrompt = customSystemPrompt ?? notebookSystemPrompt
+        messages.append(OpenAIMessage(role: "system", content: systemPrompt))
         
         var fullHistory = "Here is the chat history to summarize:\n\n"
         for message in chatHistory {
@@ -196,18 +204,14 @@ class LLMManager {
         return responseText
     }
     
-    // --- 3. NEW EXAM AGENT FUNCTION ---
+    /// Generates a practice exam from project context
     func generateExam(from project: Project, modelContext: ModelContext) async throws -> Quiz {
         
-        // --- !!! ACTION REQUIRED !!! ---
-        // I need your `LibraryManager` or `FileIndexer` code to know
-        // how to get the text content for all files in a project.
-        // I will use a placeholder function.
-        let fullContext = await getContextForProject(project)
-        // --- !!! END ACTION REQUIRED !!! ---
+        // Fixed: Added 'await' since getContext is async
+        let fullContext = await LibraryManager.shared.getContext(for: project)
 
         if fullContext.isEmpty {
-            throw AIError.invalidResponse // Or a custom error
+            throw AIError.invalidResponse
         }
         
         let messages = [
@@ -250,19 +254,18 @@ class LLMManager {
             quiz.questions.append(question)
         }
         
-        // We can insert the quiz into the context here
+        // Insert the quiz into the context
         modelContext.insert(quiz)
         try modelContext.save()
         
         return quiz
     }
 
-    // --- 4. NEW TIMELINE AGENT FUNCTION ---
+    /// Generates a timeline from project context
     func generateTimeline(from project: Project) async throws -> String {
         
-        // --- !!! ACTION REQUIRED !!! ---
-        let fullContext = await getContextForProject(project)
-        // --- !!! END ACTION REQUIRED !!! ---
+        // Fixed: Added 'await' since getContext is async
+        let fullContext = await LibraryManager.shared.getContext(for: project)
 
         if fullContext.isEmpty {
             throw AIError.invalidResponse
@@ -286,32 +289,17 @@ class LLMManager {
     
     // MARK: - Private Helpers
     
-    // --- !!! ACTION REQUIRED !!! ---
-    // This is a placeholder. You need to replace this with your actual
-    // logic for getting all text content from your `FileIndexer` or `LibraryManager`.
-    private func getContextForProject(_ project: Project) async -> String {
-        print("Fetching context for project: \(project.name)...")
-        //
-        // PSEUDO-CODE:
-        // let fileChunks = FileIndexer.shared.getAllChunks(for: project)
-        // return fileChunks.map { $0.content }.joined(separator: "\n\n---\n\n")
-        //
-        // For now, I'll return placeholder text.
-        // Replace this with your actual implementation.
-        return "This is placeholder text for \(project.name). Replace getContextForProject in LLMManager.swift with your code to fetch all text chunks for a project."
-    }
-    // --- !!! END ACTION REQUIRED !!! ---
-    
     private func generateSmartPrompt(for files: [URL]) -> String {
         return """
         You are a File System Analyst AI assistant named Omni.
         
         CRITICAL RULES:
         1. Answer questions ONLY based on the file content provided in the context.
-        2. When citing sources, simply say "According to the file" or "Based on the provided document" - do NOT mention specific filenames.
-        3. If the context has no relevant information, say so clearly.
-        4. **SYNTHESIS:** If you combine information from multiple sources, say "Based on the provided files" or "According to the documents".
-        5. Be natural and conversational - avoid overly formal language.
+        2. You MUST cite your sources. For every claim you make, end the sentence with a citation in this exact format: [Source: file_name.ext]
+        3. If the information comes from multiple files, cite all of them: [Source: file_A.pdf, file_B.txt]
+        4. If the context has no relevant information, say so clearly.
+        5. **SYNTHESIS:** If you combine information from multiple sources, say "Based on the provided files" or "According to the documents".
+        6. Be natural and conversational - avoid overly formal language.
         """
     }
 }

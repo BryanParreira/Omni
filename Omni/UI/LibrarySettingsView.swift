@@ -22,7 +22,7 @@ struct LibrarySettingsView: View {
         ZStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
-                    // Header card
+                    // Header card... (Unchanged)
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Library Projects")
@@ -66,6 +66,7 @@ struct LibrarySettingsView: View {
                     
                     // Projects List
                     if libraryManager.projects.isEmpty {
+                        // ... (Empty state is unchanged)
                         VStack(spacing: 14) {
                             Image(systemName: "folder.badge.plus")
                                 .font(.system(size: 36))
@@ -90,12 +91,12 @@ struct LibrarySettingsView: View {
                         )
                     } else {
                         VStack(spacing: 10) {
-                            ForEach(libraryManager.projects) { project in
+                            // --- 1. THIS IS THE KEY CHANGE ---
+                            // We now loop over the *bindings* of the projects
+                            ForEach($libraryManager.projects) { $project in
                                 ProjectRow(
-                                    project: project,
-                                    onToggle: {
-                                        libraryManager.toggleProjectActive(project)
-                                    },
+                                    // Pass the binding down
+                                    project: $project,
                                     onRename: {
                                         selectedProject = project
                                         renameText = project.name
@@ -124,6 +125,7 @@ struct LibrarySettingsView: View {
                 .padding(24)
             }
             .sheet(isPresented: $showingNewProjectSheet) {
+                // ... (NewProjectSheet is unchanged)
                 NewProjectSheet(
                     projectName: $newProjectName,
                     onCreate: {
@@ -138,6 +140,7 @@ struct LibrarySettingsView: View {
                 )
             }
             .alert("Rename Project", isPresented: $showingRenameAlert) {
+                // ... (Alert is unchanged)
                 TextField("Project Name", text: $renameText)
                 Button("Cancel", role: .cancel) {
                     selectedProject = nil
@@ -156,6 +159,7 @@ struct LibrarySettingsView: View {
             }
             
             if isGenerating {
+                // ... (Loading overlay is unchanged)
                 VStack(spacing: 12) {
                     ProgressView()
                         .scaleEffect(1.2)
@@ -174,6 +178,7 @@ struct LibrarySettingsView: View {
     }
     
     private func selectFiles(for project: Project) {
+        // ... (This function is unchanged)
         let openPanel = NSOpenPanel()
         openPanel.title = "Select Files"
         openPanel.allowsMultipleSelection = true
@@ -193,6 +198,7 @@ struct LibrarySettingsView: View {
         }
     }
     
+    // ... (Handler functions are unchanged)
     private func handleGenerateQuiz(for project: Project) async {
         isGenerating = true
         generationStatus = "Generating quiz..."
@@ -221,8 +227,10 @@ struct LibrarySettingsView: View {
 
 // MARK: - Project Row
 struct ProjectRow: View {
-    let project: Project
-    let onToggle: () -> Void
+    // --- 2. THIS IS NOW A @Binding ---
+    @Binding var project: Project
+    
+    // 'onToggle' is removed
     let onRename: () -> Void
     let onDelete: () -> Void
     let onAddFiles: () -> Void
@@ -237,6 +245,7 @@ struct ProjectRow: View {
         VStack(alignment: .leading, spacing: 0) {
             // Project Header
             HStack(spacing: 10) {
+                // ... (Button, Image, Text... unchanged)
                 Button(action: { withAnimation(.easeOut(duration: 0.2)) { isExpanded.toggle() } }) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: 11, weight: .semibold))
@@ -246,31 +255,21 @@ struct ProjectRow: View {
                 }
                 .buttonStyle(.plain)
                 
-                Image(systemName: project.isActive ? "folder.fill" : "folder")
+                Image(systemName: "folder.fill")
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(project.isActive ? Color(hex: "FF6B6B") : Color(hex: "777777"))
+                    .foregroundColor(Color(hex: "777777"))
                 
                 Text(project.name)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(Color(hex: "EAEAEA"))
                 
-                if project.isActive {
-                    Text("ACTIVE")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(Color(hex: "FF6B6B"))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(hex: "FF6B6B").opacity(0.15))
-                        .cornerRadius(3)
-                }
-                
-                Text("\(project.files.count)")
+                Text("\(project.files.count) files")
                     .font(.system(size: 11))
                     .foregroundColor(Color(hex: "666666"))
                 
                 Spacer()
                 
-                // Action Buttons
+                // Action Buttons (Toggle is removed)
                 HStack(spacing: 6) {
                     Button(action: onAddFiles) {
                         Image(systemName: "plus.circle")
@@ -298,22 +297,14 @@ struct ProjectRow: View {
                 }
             }
             .padding(12)
-            .background(
-                project.isActive
-                    ? Color(hex: "FF6B6B").opacity(0.08)
-                    : Color(hex: "252525")
-            )
+            .background(Color(hex: "252525"))
             .cornerRadius(8)
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(
-                        project.isActive
-                            ? Color(hex: "FF6B6B").opacity(0.3)
-                            : Color.clear,
-                        lineWidth: 1
-                    )
+                    .stroke(Color.clear, lineWidth: 1)
             )
             .contextMenu {
+                // ... (Context menu is unchanged)
                 Button(action: onAddFiles) {
                     Label("Add Files...", systemImage: "plus")
                 }
@@ -343,6 +334,7 @@ struct ProjectRow: View {
             // Files List (when expanded)
             if isExpanded {
                 VStack(alignment: .leading, spacing: 4) {
+                    // ... (ForEach for files is unchanged)
                     if project.files.isEmpty {
                         Text("No files yet. Click + to add files.")
                             .font(.system(size: 11))
@@ -380,7 +372,43 @@ struct ProjectRow: View {
                 .padding(.leading, 36)
                 .padding(.trailing, 12)
                 .padding(.top, 6)
+                
+                // --- 3. ADD THE NEW TEXTEDITOR ---
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Custom Instructions (System Prompt)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color(hex: "AAAAAA"))
+                    
+                    TextEditor(text: $project.systemPrompt) // Binds to the project
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                        .padding(8)
+                        .background(Color(hex: "1E1E1E"))
+                        .cornerRadius(6)
+                        .frame(height: 80)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(hex: "333333"), lineWidth: 1)
+                        )
+                        .scrollContentBackground(.hidden)
+                    
+                    Text("The AI will use these instructions when this project is attached to a chat.")
+                        .font(.system(size: 11))
+                        .foregroundColor(Color(hex: "777777"))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.leading, 36)
+                .padding(.trailing, 12)
+                .padding(.top, 10)
                 .padding(.bottom, 8)
+                // --- 4. SAVE ON CHANGE ---
+                .onChange(of: project.systemPrompt) { _, _ in
+                    // This is a simple way to save.
+                    // For performance, you could add a "debounce" timer here.
+                    LibraryManager.shared.saveProjects()
+                }
+                // --- END OF ADDITIONS ---
             }
         }
         .animation(.easeOut(duration: 0.2), value: isExpanded)
@@ -389,6 +417,7 @@ struct ProjectRow: View {
 
 // MARK: - New Project Sheet
 struct NewProjectSheet: View {
+    // ... (This struct is unchanged)
     @Binding var projectName: String
     let onCreate: () -> Void
     let onCancel: () -> Void
