@@ -41,13 +41,24 @@ actor IndexerActor {
             // Check if the file is in our app's temp directory (e.g., a web scrape)
             let isTempFile = url.path.starts(with: FileManager.default.temporaryDirectory.path)
             
+            // **FIX 1:** This flag and the defer block correctly handle security-scoped access.
+            var needsStopAccessing = false
+            
             // If it's NOT a temp file, we must perform the security check.
             if !isTempFile {
                 guard url.startAccessingSecurityScopedResource() else {
                     print("Failed to get security access for file: \(url.lastPathComponent)")
                     continue
                 }
-                defer { url.stopAccessingSecurityScopedResource() }
+                needsStopAccessing = true
+            }
+            
+            // This 'defer' now correctly runs at the end of the loop iteration,
+            // releasing the resource only *after* we're done reading the file.
+            defer {
+                if needsStopAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
             }
             
             // Changed to 'await' for OCR support
@@ -84,7 +95,8 @@ actor IndexerActor {
             return readText(at: url)
         // Add image support with OCR
         case "jpg", "jpeg", "png", "heic", "tiff", "gif", "bmp":
-            return await ocrService.extractText(from: url)
+            // **FIX 2:** Added 'try?' to handle potential throwing errors from the OCR service.
+            return await try? ocrService.extractText(from: url)
         default:
             return nil
         }
