@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct LibrarySettingsView: View {
-    @Environment(\.modelContext) private var modelContext // <-- 1. Add Model Context
+    @Environment(\.modelContext) private var modelContext
     @StateObject private var libraryManager = LibraryManager.shared
     
-    // --- 2. Add Bindings for Notebook ---
-    // You must pass these in from your parent view (e.g., ContentView)
     @Binding var noteContent: String
     @Binding var isShowingNotebook: Bool
     
@@ -15,14 +13,13 @@ struct LibrarySettingsView: View {
     @State private var showingRenameAlert = false
     @State private var renameText = ""
     
-    // --- 3. Add State for New Features ---
     @State private var generatedQuiz: Quiz?
     @State private var isShowingQuiz = false
-    @State private var isGenerating: Bool = false // For loading
+    @State private var isGenerating: Bool = false
     @State private var generationStatus: String = "Generating..."
 
     var body: some View {
-        ZStack { // <-- 4. Add ZStack for loading overlay
+        ZStack {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 14) {
                     // Header card
@@ -113,7 +110,6 @@ struct LibrarySettingsView: View {
                                     onRemoveFile: { file in
                                         libraryManager.removeFile(file, from: project)
                                     },
-                                    // --- 5. Pass actions to ProjectRow ---
                                     onGenerateQuiz: {
                                         Task { await handleGenerateQuiz(for: project) }
                                     },
@@ -128,7 +124,6 @@ struct LibrarySettingsView: View {
                 .padding(24)
             }
             .sheet(isPresented: $showingNewProjectSheet) {
-                // This sheet will now be found
                 NewProjectSheet(
                     projectName: $newProjectName,
                     onCreate: {
@@ -156,12 +151,10 @@ struct LibrarySettingsView: View {
                     renameText = ""
                 }
             }
-            // --- 6. Add sheet for QuizView ---
             .sheet(item: $generatedQuiz) { quiz in
                 QuizView(quiz: quiz)
             }
             
-            // --- 7. Add Loading Overlay ---
             if isGenerating {
                 VStack(spacing: 12) {
                     ProgressView()
@@ -200,16 +193,14 @@ struct LibrarySettingsView: View {
         }
     }
     
-    // --- 8. Add Handler Functions ---
     private func handleGenerateQuiz(for project: Project) async {
         isGenerating = true
         generationStatus = "Generating quiz..."
         do {
             let quiz = try await LLMManager.shared.generateExam(from: project, modelContext: modelContext)
-            self.generatedQuiz = quiz // This triggers the sheet
+            self.generatedQuiz = quiz
         } catch {
             print("Error generating quiz: \(error)")
-            // TODO: Show an error alert to the user
         }
         isGenerating = false
     }
@@ -219,11 +210,10 @@ struct LibrarySettingsView: View {
         generationStatus = "Generating timeline..."
         do {
             let timelineMarkdown = try await LLMManager.shared.generateTimeline(from: project)
-            self.noteContent = timelineMarkdown // Set the content
-            self.isShowingNotebook = true       // Show the notebook
+            self.noteContent = timelineMarkdown
+            self.isShowingNotebook = true
         } catch {
             print("Error generating timeline: \(error)")
-            // TODO: Show an error alert to the user
         }
         isGenerating = false
     }
@@ -237,7 +227,6 @@ struct ProjectRow: View {
     let onDelete: () -> Void
     let onAddFiles: () -> Void
     let onRemoveFile: (LibraryFile) -> Void
-    // --- 9. Add action properties ---
     let onGenerateQuiz: () -> Void
     let onGenerateTimeline: () -> Void
     
@@ -283,15 +272,6 @@ struct ProjectRow: View {
                 
                 // Action Buttons
                 HStack(spacing: 6) {
-                    Toggle("", isOn: .init(
-                        get: { project.isActive },
-                        set: { _ in onToggle() }
-                    ))
-                    .toggleStyle(.switch)
-                    .tint(Color(hex: "FF6B6B"))
-                    .labelsHidden()
-                    .scaleEffect(0.8)
-                    
                     Button(action: onAddFiles) {
                         Image(systemName: "plus.circle")
                             .font(.system(size: 14))
@@ -333,7 +313,6 @@ struct ProjectRow: View {
                         lineWidth: 1
                     )
             )
-            // --- 10. Add Context Menu ---
             .contextMenu {
                 Button(action: onAddFiles) {
                     Label("Add Files...", systemImage: "plus")
@@ -344,7 +323,7 @@ struct ProjectRow: View {
                 Button(action: onGenerateQuiz) {
                     Label("Generate Practice Exam", systemImage: "questionmark.diamond")
                 }
-                .disabled(project.files.isEmpty) // Can't generate from nothing
+                .disabled(project.files.isEmpty)
                 
                 Button(action: onGenerateTimeline) {
                     Label("Generate Project Timeline", systemImage: "calendar.day.timeline.leading")
@@ -409,7 +388,6 @@ struct ProjectRow: View {
 }
 
 // MARK: - New Project Sheet
-// This struct is now included, fixing the "Cannot find" error.
 struct NewProjectSheet: View {
     @Binding var projectName: String
     let onCreate: () -> Void

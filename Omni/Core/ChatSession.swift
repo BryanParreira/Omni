@@ -7,18 +7,21 @@ final class ChatSession {
     var title: String
     var startDate: Date
     
+    // --- 1. ADD THIS NEW PROPERTY ---
+    // This will store the ID of the attached Library Project
+    var attachedProjectID: UUID?
+    
     @Relationship(deleteRule: .cascade, inverse: \ChatMessage.session)
     var messages: [ChatMessage] = []
     
-    // --- THIS IS THE FIX ---
-    // 1. We'll store the URLs as 'Data', just like in ChatMessage.
     private var attachedFilesData: Data?
     
     init(title: String) {
         self.id = UUID()
         self.title = title
         self.startDate = Date()
-        self.attachedFilesData = nil // Initialize as nil
+        self.attachedFilesData = nil
+        self.attachedProjectID = nil // Initialize the new property
     }
     
     // 2. We use JSONEncoder/Decoder. This is 100% reliable.
@@ -44,5 +47,4 @@ final class ChatSession {
             }
         }
     }
-    // --- END OF FIX ---
 }

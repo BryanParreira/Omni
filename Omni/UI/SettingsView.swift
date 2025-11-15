@@ -167,8 +167,7 @@ struct SettingsView: View {
     @State private var showSuccessMessage = false
     @State private var currentTab: SettingsTab = .general
     
-    // --- 1. ADD THESE BINDINGS ---
-    // These are passed in from SidebarView
+    // These are passed in from the parent view
     @Binding var noteContent: String
     @Binding var isShowingNotebook: Bool
     
@@ -228,7 +227,6 @@ struct SettingsView: View {
                             showSuccessMessage: $showSuccessMessage
                         )
                     case .library:
-                        // --- 2. PASS THE BINDINGS DOWN ---
                         LibrarySettingsView(
                             noteContent: $noteContent,
                             isShowingNotebook: $isShowingNotebook
@@ -422,13 +420,12 @@ struct AISettingsView: View {
                     icon: "cpu",
                     content: {
                         VStack(spacing: 6) {
-                            ForEach([("openai", "OpenAI", "sparkles"),
-                                     ("anthropic", "Anthropic", "brain"),
-                                     ("gemini", "Google", "globe"),
-                                     ("local", "Local LLM", "desktopcomputer")], id: \.0) { provider in
+                            ForEach([("openai", "OpenAI"),
+                                     ("anthropic", "Anthropic"),
+                                     ("gemini", "Google"),
+                                     ("local", "Local LLM")], id: \.0) { provider in
                                 ProviderButton(
                                     title: provider.1,
-                                    icon: provider.2,
                                     isSelected: selectedProvider == provider.0,
                                     action: {
                                         selectedProvider = provider.0
@@ -845,23 +842,59 @@ struct AISettingsView: View {
     }
 }
 
+// --- THIS IS THE NEW, AESTHETICALLY-IMPROVED ProviderButton ---
 struct ProviderButton: View {
     let title: String
-    let icon: String
     let isSelected: Bool
     let action: () -> Void
-    
+
     @State private var isHovered = false
-    
+
+    // This computed property will determine the icon content
+    @ViewBuilder
+    private var iconView: some View {
+        // Colors are consistent: app accent for selected, neutral for unselected
+        let iconColor: Color = isSelected ? .white : Color(hex: "AAAAAA")
+        let backgroundColor: Color = isSelected ? Color(hex: "FF6B6B") : Color(hex: "3A3A3A")
+        
+        ZStack {
+            // Consistent background for all icons
+            RoundedRectangle(cornerRadius: 7)
+                .fill(backgroundColor)
+                .frame(width: 30, height: 30)
+            
+            switch title {
+            case "OpenAI":
+                // Simple, clean, and unique
+                Image(systemName: "sparkles")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(iconColor)
+            case "Anthropic":
+                Text("A")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(iconColor)
+            case "Google":
+                Text("G")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(iconColor)
+            case "Local LLM":
+                // This matches your app's main icon theme
+                Image(systemName: "brain")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(iconColor)
+            default:
+                Image(systemName: "questionmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(iconColor)
+            }
+        }
+    }
+
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundColor(isSelected ? Color(hex: "FF6B6B") : Color(hex: "777777"))
-                    .frame(width: 28, height: 28)
-                    .background(isSelected ? Color(hex: "FF6B6B").opacity(0.15) : Color(hex: "252525"))
-                    .cornerRadius(6)
+            HStack(spacing: 12) { // Increased spacing
+                
+                iconView // Call the new computed property
                 
                 Text(title)
                     .font(.system(size: 13, weight: .medium))
@@ -873,18 +906,22 @@ struct ProviderButton: View {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(Color(hex: "FF6B6B"))
                         .font(.system(size: 14))
+                        .transition(.scale.combined(with: .opacity)) // Add transition
                 }
             }
             .padding(10)
             .background(isSelected ? Color(hex: "252525") : Color(hex: "1E1E1E"))
             .cornerRadius(6)
             .overlay(
+                // Add a subtle hover border for non-selected items
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? Color(hex: "FF6B6B").opacity(0.3) : Color.clear, lineWidth: 1)
+                    .stroke(isSelected ? Color(hex: "FF6B6B").opacity(0.3) : (isHovered ? Color(hex: "333333") : Color.clear), lineWidth: 1)
             )
-            .brightness(isHovered ? 0.05 : 0)
+            .brightness(isHovered ? 0.05 : 0) // Keep the hover brightness
         }
         .buttonStyle(.plain)
+        .animation(.easeInOut(duration: 0.15), value: isSelected) // Animate selection
+        .animation(.easeInOut(duration: 0.15), value: isHovered) // Animate hover
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 isHovered = hovering
@@ -892,6 +929,7 @@ struct ProviderButton: View {
         }
     }
 }
+
 
 // MARK: - About Tab
 

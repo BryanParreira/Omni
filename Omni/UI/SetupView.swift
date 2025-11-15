@@ -591,6 +591,7 @@ struct SetupView: View {
                 }
                 .padding(.top, 20)
                 
+                // --- THIS IS THE UPDATED SECTION ---
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     FeatureShowcaseCard(
                         icon: "globe",
@@ -615,6 +616,20 @@ struct SetupView: View {
                         title: "Quick Access",
                         description: "⌥ + Space to summon from anywhere"
                     )
+                    
+                    // --- NEW FEATURES ADDED HERE ---
+                    FeatureShowcaseCard(
+                        icon: "questionmark.diamond.fill",
+                        title: "AI Quiz Generator",
+                        description: "Turn any document or textbook into an interactive practice test."
+                    )
+                    
+                    FeatureShowcaseCard(
+                        icon: "calendar.day.timeline.leading",
+                        title: "Project Timelines",
+                        description: "Instantly create a chronological history from all your project files."
+                    )
+                    // --- END OF ADDITIONS ---
                 }
             }
             .padding(32)

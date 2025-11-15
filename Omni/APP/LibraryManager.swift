@@ -35,6 +35,7 @@ struct LibraryFile: Identifiable, Codable, Equatable {
 }
 
 // MARK: - Library Manager
+@MainActor
 class LibraryManager: ObservableObject {
     static let shared = LibraryManager()
     
@@ -47,7 +48,33 @@ class LibraryManager: ObservableObject {
         loadProjects()
     }
     
+    // MARK: - New Chat-Specific Helpers
+    
+    /// Finds and returns a project by its unique ID.
+    /// This is used by ContentViewModel to find the project attached to a chat session.
+    func getProject(by id: UUID) -> Project? {
+        return projects.first(where: { $0.id == id })
+    }
+    
+    /// Generates the full-text context for a *specific* project.
+    /// This is the new way to get context for a single chat session.
+    func getContext(for project: Project) -> String {
+        let files = project.files
+        guard !files.isEmpty else { return "" }
+        
+        var context = "# Reference Library Context: \(project.name)\n(This chat is using \(project.files.count) file(s) as a source of truth.)\n\n---\n\n"
+        
+        for file in files {
+            context += "## File: \(file.name)\n\n"
+            // We use the 'content' property you already have in your model
+            context += "\(file.content)\n\n"
+            context += "---\n\n"
+        }
+        return context
+    }
+    
     // MARK: - Project Management
+    
     func createProject(name: String) {
         let newProject = Project(name: name)
         projects.append(newProject)
@@ -95,6 +122,7 @@ class LibraryManager: ObservableObject {
         }
     }
     
+    // This is still used by your Settings view
     var activeProject: Project? {
         projects.first { $0.isActive }
     }
@@ -130,7 +158,7 @@ class LibraryManager: ObservableObject {
         saveProjects()
     }
     
-    // Get all files from active project for chat context
+    // Get all files from active project for chat context (Old logic, still used by old VM code)
     func getActiveProjectFiles() -> [LibraryFile] {
         guard let active = activeProject else { return [] }
         return active.files
@@ -162,7 +190,7 @@ class LibraryManager: ObservableObject {
     private func loadProjects() {
         guard let data = UserDefaults.standard.data(forKey: projectsKey) else {
             // Create a default project if none exist
-            projects = [Project(name: "Default Project", isActive: true)]
+            projects = [Project(name: "Default Project", isActive: false)] // Changed default to false
             saveProjects()
             return
         }
@@ -171,7 +199,7 @@ class LibraryManager: ObservableObject {
             projects = try JSONDecoder().decode([Project].self, from: data)
         } catch {
             print("Error loading projects: \(error.localizedDescription)")
-            projects = [Project(name: "Default Project", isActive: true)]
+            projects = [Project(name: "Default Project", isActive: false)]
         }
     }
 }

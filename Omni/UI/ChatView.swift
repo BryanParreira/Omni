@@ -13,6 +13,7 @@ struct ChatView: View {
     @State private var brainButtonHovered = false
     @State private var sendButtonHovered = false
     @State private var showScrollToBottom = false
+    @State private var showBrainMenu = false
     
     var session: ChatSession {
         viewModel.currentSession
@@ -20,6 +21,11 @@ struct ChatView: View {
     
     var sortedMessages: [ChatMessage] {
         session.messages.sorted(by: { $0.timestamp < $1.timestamp })
+    }
+    
+    private var attachedProject: Project? {
+        guard let projectID = viewModel.currentSession.attachedProjectID else { return nil }
+        return libraryManager.getProject(by: projectID)
     }
 
     private var shouldShowFilePills: Bool {
@@ -32,13 +38,12 @@ struct ChatView: View {
     
     var body: some View {
         ZStack {
-            // Clean background
             Color(hex: "1A1A1A").ignoresSafeArea()
             
             VStack(spacing: 0) {
                 chatArea
                 filePillsArea
-                libraryIndicatorArea
+                projectIndicatorArea
                 inputArea
             }
             
@@ -106,13 +111,11 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 LazyVStack(spacing: 0) {
-                    // Empty state
                     if sortedMessages.isEmpty && !viewModel.isLoading {
                         emptyStateView
                             .padding(.top, 60)
                     }
                     
-                    // Messages
                     ForEach(sortedMessages) { message in
                         MessageBubbleView(message: message)
                             .id(message.id)
@@ -120,7 +123,6 @@ struct ChatView: View {
                             .padding(.vertical, 12)
                     }
                     
-                    // Loading indicator
                     if viewModel.isLoading {
                         HStack {
                             loadingIndicator
@@ -245,8 +247,8 @@ struct ChatView: View {
     }
     
     @ViewBuilder
-    private var libraryIndicatorArea: some View {
-        if viewModel.useGlobalLibrary, let activeProject = libraryManager.activeProject {
+    private var projectIndicatorArea: some View {
+        if let project = attachedProject {
             HStack(spacing: 10) {
                 Image(systemName: "brain.fill")
                     .font(.system(size: 12, weight: .semibold))
@@ -256,34 +258,17 @@ struct ChatView: View {
                     .font(.system(size: 12))
                     .foregroundColor(Color(hex: "999999"))
                 
-                HStack(spacing: 5) {
-                    Image(systemName: "folder.fill")
-                        .font(.system(size: 10))
-                    Text(activeProject.name)
-                        .font(.system(size: 12, weight: .medium))
-                }
-                .foregroundColor(Color(hex: "FF6B6B"))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color(hex: "FF6B6B").opacity(0.12))
-                .cornerRadius(5)
+                ProjectPillView(project: project, onRemove: {
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        viewModel.setAttachedProject(nil)
+                    }
+                })
                 
-                Text("\(activeProject.files.count) files")
+                Text("\(project.files.count) files")
                     .font(.system(size: 11))
                     .foregroundColor(Color(hex: "777777"))
                 
                 Spacer()
-                
-                Button(action: {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        viewModel.useGlobalLibrary = false
-                    }
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(hex: "666666"))
-                }
-                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
@@ -291,39 +276,6 @@ struct ChatView: View {
             .overlay(
                 Rectangle()
                     .fill(Color(hex: "FF6B6B").opacity(0.3))
-                    .frame(height: 1),
-                alignment: .top
-            )
-            .transition(.move(edge: .bottom).combined(with: .opacity))
-        } else if viewModel.useGlobalLibrary && libraryManager.activeProject == nil {
-            HStack(spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12))
-                    .foregroundColor(.orange)
-                
-                Text("No active project. Enable one in Library settings.")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(hex: "999999"))
-                
-                Spacer()
-                
-                Button(action: {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        viewModel.useGlobalLibrary = false
-                    }
-                }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(hex: "666666"))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 10)
-            .background(Color.orange.opacity(0.08))
-            .overlay(
-                Rectangle()
-                    .fill(Color.orange.opacity(0.3))
                     .frame(height: 1),
                 alignment: .top
             )
@@ -358,47 +310,58 @@ struct ChatView: View {
                         attachButtonHovered = hovering
                     }
                     
-                    // Brain button
-                    Button(action: {
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            viewModel.useGlobalLibrary.toggle()
-                        }
-                    }) {
-                        ZStack {
-                            Image(systemName: viewModel.useGlobalLibrary ? "brain.fill" : "brain")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(
-                                    viewModel.useGlobalLibrary
-                                        ? Color(hex: "FF6B6B")
-                                        : (brainButtonHovered ? Color(hex: "AAAAAA") : Color(hex: "666666"))
-                                )
-                                .frame(width: 32, height: 32)
-                                .background(
-                                    Circle()
-                                        .fill(
-                                            viewModel.useGlobalLibrary
-                                                ? Color(hex: "FF6B6B").opacity(0.15)
-                                                : (brainButtonHovered ? Color(hex: "252525") : Color.clear)
-                                        )
-                                )
-                            
-                            // Active indicator dot
-                            if viewModel.useGlobalLibrary, libraryManager.activeProject != nil {
+                    // Brain menu with improved UI and popover
+                    Button(action: { showBrainMenu.toggle() }) {
+                        Image(systemName: attachedProject != nil ? "brain.fill" : "brain")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(
+                                attachedProject != nil
+                                    ? Color(hex: "FF6B6B")
+                                    : (brainButtonHovered ? Color(hex: "AAAAAA") : Color(hex: "666666"))
+                            )
+                            .frame(width: 32, height: 32)
+                            .background(
                                 Circle()
-                                    .fill(Color(hex: "FF6B6B"))
-                                    .frame(width: 8, height: 8)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color(hex: "1A1A1A"), lineWidth: 2)
+                                    .fill(
+                                        attachedProject != nil
+                                            ? Color(hex: "FF6B6B").opacity(0.15)
+                                            : (brainButtonHovered ? Color(hex: "252525") : Color.clear)
                                     )
-                                    .offset(x: 9, y: -9)
-                            }
-                        }
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(
+                                        attachedProject != nil
+                                            ? Color(hex: "FF6B6B").opacity(0.3)
+                                            : Color.clear,
+                                        lineWidth: 1
+                                    )
+                            )
+                            .scaleEffect(brainButtonHovered ? 1.05 : 1.0)
+                            .animation(.easeOut(duration: 0.15), value: brainButtonHovered)
                     }
                     .buttonStyle(.plain)
                     .help(brainButtonHelp)
                     .onHover { hovering in
                         brainButtonHovered = hovering
+                    }
+                    .popover(isPresented: $showBrainMenu, arrowEdge: .top) {
+                        BrainMenuPopover(
+                            projects: libraryManager.projects,
+                            attachedProject: attachedProject,
+                            onSelectProject: { project in
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    viewModel.setAttachedProject(project)
+                                    showBrainMenu = false
+                                }
+                            },
+                            onDetach: {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    viewModel.setAttachedProject(nil)
+                                    showBrainMenu = false
+                                }
+                            }
+                        )
                     }
                 }
                 
@@ -523,14 +486,10 @@ struct ChatView: View {
     // MARK: - Helper Properties & Functions
     
     private var brainButtonHelp: String {
-        if let activeProject = libraryManager.activeProject {
-            if viewModel.useGlobalLibrary {
-                return "Stop using '\(activeProject.name)' (\(activeProject.files.count) files)"
-            } else {
-                return "Include '\(activeProject.name)' (\(activeProject.files.count) files)"
-            }
+        if let project = attachedProject {
+            return "Using '\(project.name)'. Click to change or detach."
         } else {
-            return "No active library project"
+            return "Attach a Library Project to this chat"
         }
     }
     
@@ -562,7 +521,6 @@ struct ChatView: View {
 }
 
 // MARK: - Enhanced File Pill
-
 struct EnhancedFilePill: View {
     let url: URL
     let onRemove: () -> Void
@@ -619,5 +577,240 @@ struct EnhancedFilePill: View {
         .onHover { hovering in
             isHovered = hovering
         }
+    }
+}
+
+// MARK: - Project Pill View
+struct ProjectPillView: View {
+    let project: Project
+    let onRemove: () -> Void
+    
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "folder.fill")
+                .font(.system(size: 11))
+                .foregroundColor(Color(hex: "FF6B6B"))
+            
+            Text(project.name)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color(hex: "EAEAEA"))
+                .lineLimit(1)
+            
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(Color(hex: "666666"))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(hex: "252525"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color(hex: "333333"), lineWidth: 1)
+                )
+        )
+        .scaleEffect(isHovered ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+}
+
+// MARK: - Brain Menu Popover
+struct BrainMenuPopover: View {
+    let projects: [Project]
+    let attachedProject: Project?
+    let onSelectProject: (Project) -> Void
+    let onDetach: () -> Void
+    
+    @State private var hoveredProjectID: UUID?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(spacing: 8) {
+                Image(systemName: "brain.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "FF6B6B"))
+                
+                Text("Library Projects")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(Color(hex: "EAEAEA"))
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color(hex: "222222"))
+            
+            Divider()
+                .background(Color(hex: "2A2A2A"))
+            
+            // Content
+            if projects.isEmpty {
+                // Empty state
+                VStack(spacing: 12) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.system(size: 32))
+                        .foregroundColor(Color(hex: "666666"))
+                    
+                    VStack(spacing: 4) {
+                        Text("No Library Projects")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(Color(hex: "999999"))
+                        
+                        Text("Create a project in Library Settings")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "666666"))
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+                .padding(.horizontal, 20)
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 4) {
+                        ForEach(projects) { project in
+                            ProjectMenuItem(
+                                project: project,
+                                isAttached: attachedProject?.id == project.id,
+                                isHovered: hoveredProjectID == project.id,
+                                onSelect: { onSelectProject(project) }
+                            )
+                            .onHover { hovering in
+                                hoveredProjectID = hovering ? project.id : nil
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 8)
+                }
+                .frame(maxHeight: 300)
+                
+                // Detach button (if something is attached)
+                if attachedProject != nil {
+                    Divider()
+                        .background(Color(hex: "2A2A2A"))
+                    
+                    Button(action: onDetach) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 13))
+                                .foregroundColor(Color(hex: "FF6B6B"))
+                            
+                            Text("Detach Project")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(Color(hex: "FF6B6B"))
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color(hex: "1A1A1A"))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .frame(width: 280)
+        .background(Color(hex: "1A1A1A"))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.3), radius: 20, x: 0, y: 10)
+    }
+}
+
+// MARK: - Project Menu Item
+struct ProjectMenuItem: View {
+    let project: Project
+    let isAttached: Bool
+    let isHovered: Bool
+    let onSelect: () -> Void
+    
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: 10) {
+                // Icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            isAttached
+                                ? Color(hex: "FF6B6B").opacity(0.15)
+                                : (isHovered ? Color(hex: "252525") : Color(hex: "222222"))
+                        )
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: project.isActive ? "folder.fill" : "folder")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(
+                            isAttached || isHovered
+                                ? Color(hex: "FF6B6B")
+                                : Color(hex: "777777")
+                        )
+                }
+                
+                // Project info
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(project.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(Color(hex: "EAEAEA"))
+                        .lineLimit(1)
+                    
+                    HStack(spacing: 4) {
+                        Text("\(project.files.count)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Color(hex: "FF6B6B"))
+                        
+                        Text(project.files.count == 1 ? "file" : "files")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(hex: "666666"))
+                    }
+                }
+                
+                Spacer()
+                
+                // Checkmark or arrow
+                if isAttached {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "FF6B6B"))
+                } else if isHovered {
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(Color(hex: "666666"))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(
+                        isAttached
+                            ? Color(hex: "FF6B6B").opacity(0.08)
+                            : (isHovered ? Color(hex: "252525") : Color.clear)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(
+                        isAttached
+                            ? Color(hex: "FF6B6B").opacity(0.3)
+                            : Color.clear,
+                        lineWidth: 1
+                    )
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(project.files.isEmpty)
+        .opacity(project.files.isEmpty ? 0.4 : 1.0)
     }
 }

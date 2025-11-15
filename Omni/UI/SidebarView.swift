@@ -8,9 +8,6 @@ struct SidebarView: View {
     private var chatSessions: [ChatSession]
     
     @Binding var selectedSession: ChatSession?
-    
-    // --- 1. ADD THESE BINDINGS ---
-    // These will be passed in from your ContentView
     @Binding var noteContent: String
     @Binding var isShowingNotebook: Bool
     
@@ -19,66 +16,88 @@ struct SidebarView: View {
     @FocusState private var isRenameFieldFocused: Bool
     @State private var isShowingSettings: Bool = false
     @State private var hoveredSession: ChatSession? = nil
+    @State private var newChatButtonHovered = false
+    @State private var settingsButtonHovered = false
     
     var body: some View {
         VStack(spacing: 0) {
-            // Clean header with app branding
-            HStack(spacing: 10) {
-                // Simple, elegant icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 28, height: 28)
+            // Professional header
+            VStack(spacing: 16) {
+                HStack(spacing: 12) {
+                    // Minimal monochrome icon
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color(hex: "252525"))
+                            .frame(width: 32, height: 32)
+                        
+                        Image(systemName: "brain.head.profile")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(Color(hex: "AAAAAA"))
+                    }
                     
-                    Image(systemName: "brain.head.profile")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Omni")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(Color(hex: "EAEAEA"))
+                        
+                        Text("AI Assistant")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundColor(Color(hex: "666666"))
+                    }
+                    
+                    Spacer()
                 }
                 
-                Text("Omni")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(Color(hex: "EAEAEA"))
-                
-                Spacer()
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 16)
-            .background(Color(hex: "1E1E1E"))
-            
-            // New Chat button - clean and simple
-            Button(action: createNewChat) {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("New Chat")
-                        .font(.system(size: 14, weight: .medium))
+                // Minimal New Chat button
+                Button(action: createNewChat) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .medium))
+                        Text("New Chat")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundColor(Color(hex: "CCCCCC"))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(newChatButtonHovered ? Color(hex: "252525") : Color(hex: "222222"))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(hex: "2A2A2A"), lineWidth: 1)
+                    )
                 }
-                .foregroundColor(Color(hex: "EAEAEA"))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(Color(hex: "2A2A2A"))
-                )
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        newChatButtonHovered = hovering
+                    }
+                }
             }
-            .buttonStyle(.plain)
             .padding(.horizontal, 16)
-            .padding(.bottom, 12)
+            .padding(.top, 20)
+            .padding(.bottom, 16)
+            .background(Color(hex: "1A1A1A"))
             
-            // Subtle divider
+            // Elegant divider with gradient
             Rectangle()
-                .fill(Color(hex: "2A2A2A"))
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(hex: "FF6B6B").opacity(0.2),
+                            Color(hex: "2A2A2A"),
+                            Color(hex: "FF8E53").opacity(0.2)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
                 .frame(height: 1)
             
-            // Chat list - clean and minimal
-            ScrollView {
-                LazyVStack(spacing: 1) {
+            // Chat list with refined styling
+            ScrollView(showsIndicators: false) {
+                LazyVStack(spacing: 4) {
                     ForEach(chatSessions) { session in
                         ChatSessionRow(
                             session: session,
@@ -97,35 +116,70 @@ struct SidebarView: View {
                         }
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 12)
             }
-            .background(Color(hex: "1E1E1E"))
+            .background(Color(hex: "1A1A1A"))
             
             Spacer()
             
-            // Settings at bottom - clean separator
-            Rectangle()
-                .fill(Color(hex: "2A2A2A"))
-                .frame(height: 1)
-            
-            Button(action: { isShowingSettings = true }) {
-                HStack(spacing: 10) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 14))
-                    Text("Settings")
-                        .font(.system(size: 14, weight: .medium))
-                    Spacer()
+            // Premium settings button
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color(hex: "2A2A2A"))
+                    .frame(height: 1)
+                
+                Button(action: { isShowingSettings = true }) {
+                    HStack(spacing: 12) {
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    settingsButtonHovered
+                                        ? Color(hex: "FF6B6B").opacity(0.15)
+                                        : Color(hex: "252525")
+                                )
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(
+                                    settingsButtonHovered
+                                        ? Color(hex: "FF6B6B")
+                                        : Color(hex: "888888")
+                                )
+                        }
+                        
+                        Text("Settings")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(
+                                settingsButtonHovered
+                                    ? Color(hex: "EAEAEA")
+                                    : Color(hex: "AAAAAA")
+                            )
+                        
+                        Spacer()
+                        
+                        if settingsButtonHovered {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(hex: "666666"))
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color(hex: "1A1A1A"))
+                    .contentShape(Rectangle())
                 }
-                .foregroundColor(Color(hex: "AAAAAA"))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
+                .buttonStyle(.plain)
+                .onHover { hovering in
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        settingsButtonHovered = hovering
+                    }
+                }
             }
-            .buttonStyle(.plain)
-            .background(Color(hex: "1E1E1E"))
         }
-        .background(Color(hex: "1E1E1E"))
+        .background(Color(hex: "1A1A1A"))
         .sheet(isPresented: $isShowingSettings) {
-            // --- 2. PASS THE BINDINGS TO SETTINGS VIEW ---
             SettingsView(
                 noteContent: $noteContent,
                 isShowingNotebook: $isShowingNotebook
@@ -146,35 +200,28 @@ struct SidebarView: View {
         )
         newSession.messages.append(welcomeMessage)
         
-        saveChanges() // Use new save function
+        saveChanges()
         selectedSession = newSession
     }
     
     private func deleteSession(_ session: ChatSession) {
-        // --- 1. Improved Delete Behavior ---
-        // Check if the deleted session is the selected one
         if selectedSession == session {
-            // Get the current list of sessions (respecting the query's sort order)
             let sessions = self.chatSessions
             if let currentIndex = sessions.firstIndex(of: session) {
                 if sessions.count == 1 {
-                    // It was the last session
                     selectedSession = nil
                 } else if currentIndex == 0 {
-                    // It was the first item, select the next one (at index 1)
                     selectedSession = sessions[1]
                 } else {
-                    // It was not the first, select the previous one
                     selectedSession = sessions[currentIndex - 1]
                 }
             } else {
-                selectedSession = nil // Fallback
+                selectedSession = nil
             }
         }
         
-        // Perform the deletion
         modelContext.delete(session)
-        saveChanges() // Use new save function
+        saveChanges()
     }
     
     private func startRename(session: ChatSession) {
@@ -191,21 +238,18 @@ struct SidebarView: View {
         
         if !renameText.isEmpty {
             session.title = renameText
-            saveChanges() // Use new save function
+            saveChanges()
         }
         
         renamingSession = nil
         renameText = ""
     }
     
-    // --- 2. Robust Error Handling ---
     private func saveChanges() {
         do {
             try modelContext.save()
         } catch {
-            // This is a great place to log the error
             print("Error saving model context: \(error.localizedDescription)")
-            // You could also show an alert to the user here
         }
     }
 }
@@ -224,53 +268,96 @@ struct ChatSessionRow: View {
     let onDelete: () -> Void
     let onSubmitRename: () -> Void
     
+    @State private var menuButtonHovered = false
+    
     var body: some View {
         Group {
             if isRenaming {
-                // Rename field with subtle accent
-                HStack(spacing: 8) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 11))
-                        .foregroundColor(Color(hex: "FF6B6B"))
+                // Premium rename field
+                HStack(spacing: 10) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: "FF6B6B").opacity(0.15))
+                            .frame(width: 28, height: 28)
+                        
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(hex: "FF6B6B"))
+                    }
                     
                     TextField("Chat name", text: $renameText)
-                        .font(.system(size: 13))
+                        .font(.system(size: 13, weight: .medium))
                         .textFieldStyle(.plain)
                         .foregroundColor(Color(hex: "EAEAEA"))
                         .focused(isRenameFieldFocused)
                         .onSubmit(onSubmitRename)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
                 .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(Color(hex: "252525"))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(hex: "FF6B6B").opacity(0.5), lineWidth: 1)
-                        )
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(hex: "222222"))
+                        
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color(hex: "FF6B6B"), Color(hex: "FF8E53")],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+                                lineWidth: 1.5
+                            )
+                    }
                 )
-                .padding(.horizontal, 8)
             } else {
-                // Regular chat item
+                // Premium chat item
                 Button(action: onSelect) {
-                    HStack(spacing: 10) {
-                        Image(systemName: session.messages.isEmpty ? "bubble.left" : "bubble.left.fill")
-                            .font(.system(size: 13))
-                            .foregroundColor(
-                                isSelected ? Color(hex: "FF6B6B") : Color(hex: "666666")
-                            )
+                    HStack(spacing: 12) {
+                        // Smaller icon
+                        ZStack {
+                            Circle()
+                                .fill(
+                                    isSelected
+                                        ? LinearGradient(
+                                            colors: [Color(hex: "FF6B6B").opacity(0.2), Color(hex: "FF8E53").opacity(0.2)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                        : LinearGradient(
+                                            colors: [Color(hex: "252525"), Color(hex: "252525")],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                )
+                                .frame(width: 28, height: 28)
+                            
+                            Image(systemName: session.messages.isEmpty ? "message" : "message.fill")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(
+                                    isSelected ? Color(hex: "FF6B6B") : Color(hex: "777777")
+                                )
+                        }
                         
-                        Text(session.title)
-                            .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-                            .foregroundColor(
-                                isSelected ? Color(hex: "EAEAEA") : Color(hex: "AAAAAA")
-                            )
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.title)
+                                .font(.system(size: 13, weight: isSelected ? .semibold : .medium))
+                                .foregroundColor(
+                                    isSelected ? Color(hex: "FFFFFF") : Color(hex: "BBBBBB")
+                                )
+                                .lineLimit(1)
+                            
+                            if isSelected || isHovered {
+                                Text(session.lastMessagePreview)
+                                    .font(.system(size: 11))
+                                    .foregroundColor(Color(hex: "666666"))
+                                    .lineLimit(1)
+                            }
+                        }
                         
-                        // --- 3. Fix Row Layout "Jump" ---
-                        // The Menu is now always in the layout, but hidden with opacity
+                        Spacer(minLength: 4)
+                        
+                        // Menu button
                         Menu {
                             Button(action: onRename) {
                                 Label("Rename", systemImage: "pencil")
@@ -282,35 +369,59 @@ struct ChatSessionRow: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         } label: {
-                            Image(systemName: "ellipsis")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(hex: "666666"))
-                                .frame(width: 20, height: 20)
+                            ZStack {
+                                Circle()
+                                    .fill(menuButtonHovered ? Color(hex: "2A2A2A") : Color.clear)
+                                    .frame(width: 24, height: 24)
+                                
+                                Image(systemName: "ellipsis")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(Color(hex: "777777"))
+                            }
                         }
                         .menuIndicator(.hidden)
                         .menuStyle(.borderlessButton)
-                        .opacity(isHovered ? 1.0 : 0.0) // Use opacity
+                        .opacity((isHovered || isSelected) ? 1.0 : 0.0)
+                        .onHover { hovering in
+                            menuButtonHovered = hovering
+                        }
                     }
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(
-                                isSelected
-                                    ? Color(hex: "252525")
-                                    : (isHovered ? Color(hex: "232323") : Color.clear)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(
+                                    isSelected
+                                        ? Color(hex: "252525")
+                                        : (isHovered ? Color(hex: "222222") : Color.clear)
+                                )
+                            
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 10)
                                     .stroke(
-                                        isSelected ? Color(hex: "FF6B6B").opacity(0.3) : Color.clear,
+                                        LinearGradient(
+                                            colors: [
+                                                Color(hex: "FF6B6B").opacity(0.5),
+                                                Color(hex: "FF8E53").opacity(0.5)
+                                            ],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        ),
                                         lineWidth: 1
                                     )
-                            )
+                            }
+                        }
+                    )
+                    .shadow(
+                        color: isSelected ? Color(hex: "FF6B6B").opacity(0.15) : Color.clear,
+                        radius: 8,
+                        x: 0,
+                        y: 2
                     )
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 8)
+                .contentShape(Rectangle())
                 .contextMenu {
                     Button(action: onRename) {
                         Label("Rename", systemImage: "pencil")
@@ -324,7 +435,17 @@ struct ChatSessionRow: View {
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: isSelected)
-        .animation(.easeInOut(duration: 0.15), value: isHovered) // This animates hover bg and opacity
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+        .animation(.easeOut(duration: 0.15), value: isHovered)
+    }
+}
+
+// MARK: - ChatSession Extension
+extension ChatSession {
+    var lastMessagePreview: String {
+        if let lastMessage = messages.last {
+            return lastMessage.content.prefix(40) + (lastMessage.content.count > 40 ? "..." : "")
+        }
+        return "No messages yet"
     }
 }

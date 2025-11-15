@@ -18,7 +18,9 @@ class ContentViewModel: ObservableObject {
     @Published var notebookContent: String = ""
     @Published var isGeneratingNotebook: Bool = false
     
-    @Published var useGlobalLibrary: Bool = false
+    // --- 1. REMOVED ---
+    // @Published var useGlobalLibrary: Bool = false
+    // This is no longer needed, as the project is tied to the session.
     
     private var fileIndexer: FileIndexer
     private let searchService = FileSearchService()
@@ -72,12 +74,21 @@ class ContentViewModel: ObservableObject {
         url.stopAccessingSecurityScopedResource()
         try? modelContext.save()
     }
+    
+    // --- 2. NEW FUNCTION ---
+    // This function is called by the new "brain" menu in ChatView
+    func setAttachedProject(_ project: Project?) {
+        objectWillChange.send()
+        currentSession.attachedProjectID = project?.id
+        try? modelContext.save()
+        focusInput()
+    }
 
     func sendMessage() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         
-        // --- 1. URL Check ---
+        // --- URL Check (Unchanged) ---
         if let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased()) {
             
             isLoading = true
@@ -117,29 +128,28 @@ class ContentViewModel: ObservableObject {
             return
         }
         
-        // --- 2. Standard Message Logic ---
+        // --- 3. UPDATED STANDARD MESSAGE LOGIC ---
         
         objectWillChange.send()
         
         let userMessageText = inputText
-        
-        // START: Modified to use LibraryManager instead of GlobalSourceFile
         var allSourceURLs = currentSession.attachedFileURLs
-        var libraryFileURLs: [URL] = []
-        
-        // Get library context if enabled
         var libraryContextText = ""
-        if useGlobalLibrary {
-            let activeFiles = LibraryManager.shared.getActiveProjectFiles()
-            libraryFileURLs = activeFiles.map { $0.url }
-            
-            // Get formatted context for AI
-            libraryContextText = LibraryManager.shared.getActiveProjectContext()
-            
-            // Add library file URLs to sources for search
-            allSourceURLs.append(contentsOf: libraryFileURLs)
+        
+        // --- This is the new logic ---
+        // Check if a project is attached *to this session*
+        if let projectID = currentSession.attachedProjectID {
+            // Get the project from the LibraryManager
+            if let project = LibraryManager.shared.getProject(by: projectID) {
+                let projectFiles = project.files.map { $0.url }
+                
+                // Get the formatted context string to send to the AI
+                libraryContextText = LibraryManager.shared.getContext(for: project)
+                
+                // Add library file URLs so they can be searched
+                allSourceURLs.append(contentsOf: projectFiles)
+            }
         }
-        // END: Modified section
         
         inputText = ""
         let sourceFilePaths = allSourceURLs.map { $0.path }
@@ -164,11 +174,12 @@ class ContentViewModel: ObservableObject {
             do {
                 var context = ""
                 
-                // Add library context first if available
+                // Add the full library context first if available
                 if !libraryContextText.isEmpty {
                     context = libraryContextText + "\n\n---\n\n"
                 }
                 
+                // Now, perform a RAG search on ALL sources (attached + library)
                 if !allSourceURLs.isEmpty {
                     let chunks = await searchService.searchChunks(
                         query: userMessageText,
@@ -177,8 +188,10 @@ class ContentViewModel: ObservableObject {
                     )
                     
                     if chunks.isEmpty && libraryContextText.isEmpty {
+                        // This case is for when files are attached but no context is found
                         context = "No relevant context found in the attached files for that query."
                     } else if !chunks.isEmpty {
+                        // Append RAG results to the main context
                         context += "RELEVANT CONTEXT FROM SEARCH:\n"
                         context += chunks.map { chunk in
                             let displayName = normalizeFileName(chunk.fileName)
@@ -192,7 +205,7 @@ class ContentViewModel: ObservableObject {
                 let aiResponse = try await LLMManager.shared.generateResponse(
                     chatHistory: chatHistory,
                     context: context,
-                    files: allSourceURLs
+                    files: allSourceURLs // Pass all files for the smart prompt
                 )
                 
                 botMessage = ChatMessage(
@@ -238,6 +251,9 @@ class ContentViewModel: ObservableObject {
         
         currentSession.attachedFileURLs = []
         
+        // --- 4. CLEAR ATTACHED PROJECT ---
+        currentSession.attachedProjectID = nil
+        
         try? modelContext.save()
     }
     
@@ -250,11 +266,11 @@ class ContentViewModel: ObservableObject {
         
         Task {
             do {
-                // Include library files in notebook generation if enabled
+                // --- 5. UPDATED NOTEBOOK LOGIC ---
                 var allFiles = currentSession.attachedFileURLs
-                if useGlobalLibrary {
-                    let libraryFiles = LibraryManager.shared.getActiveProjectFiles()
-                    allFiles.append(contentsOf: libraryFiles.map { $0.url })
+                if let projectID = currentSession.attachedProjectID,
+                   let project = LibraryManager.shared.getProject(by: projectID) {
+                    allFiles.append(contentsOf: project.files.map { $0.url })
                 }
                 
                 let generatedNote = try await LLMManager.shared.generateNotebook(
@@ -274,7 +290,6 @@ class ContentViewModel: ObservableObject {
     
     // MARK: - Private Helpers
     
-    /// Normalizes filenames so images appear as generic documents to the AI
     private func normalizeFileName(_ fileName: String) -> String {
         let imageExtensions = ["jpg", "jpeg", "png", "heic", "tiff", "gif", "bmp"]
         let fileExtension = (fileName as NSString).pathExtension.lowercased()
@@ -286,7 +301,6 @@ class ContentViewModel: ObservableObject {
         return fileName
     }
     
-    /// Saves a string of text to a temporary .txt file and returns its URL.
     private func saveTextAsTempFile(text: String, fileName: String) -> URL? {
         let tempDirectory = FileManager.default.temporaryDirectory
         let sanitizedName = fileName.replacingOccurrences(of: "[^a-zA-Z0-9.-]", with: "_", options: .regularExpression)
