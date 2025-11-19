@@ -402,16 +402,85 @@ this report"
 </td>
 <td>
 
-**📅 Meeting Preparation**
+**🌐 Analyze Webpages**
 
 ```
-[View upcoming meetings in 
-sidebar]
+[Paste URL or drag link]
 
-"What's on my calendar today?"
+"Extract the main points from 
+this article"
 
-"Prepare talking points for my 
-3pm meeting"
+"Summarize this tutorial"
+
+"What are the key findings?"
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**🎯 Generate Quizzes**
+
+```
+[Drag study material]
+
+"Create a quiz from this 
+document"
+
+"Generate 10 practice questions"
+
+"Make flashcards from this PDF"
+```
+
+</td>
+<td>
+
+**📅 Create Timelines**
+
+```
+[Drag project files]
+
+"Create a timeline from these 
+documents"
+
+"Show me the project history"
+
+"Generate a chronological 
+overview"
+```
+
+</td>
+</tr>
+<tr>
+<td>
+
+**📸 Extract Text from Images**
+
+```
+[Drag image with text]
+
+"Read the text in this image"
+
+"Extract data from this 
+screenshot"
+
+"OCR this document photo"
+```
+
+</td>
+<td>
+
+**📚 Access Global Library**
+
+```
+"Search my indexed files for 
+quarterly reports"
+
+"Find all documents about 
+project X"
+
+"What's in my research folder?"
 ```
 
 </td>
