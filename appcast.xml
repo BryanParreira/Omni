@@ -6,23 +6,22 @@
     <description>Most recent changes with links to updates.</description>
     <language>en</language>
     <item>
-      <title>Version 1.1</title>
+      <title>Version 1.0</title>
       <link>https://github.com/bryanparreira/Omni/releases</link>
-      <sparkle:version>1.1</sparkle:version>
-      <sparkle:shortVersionString>1.1</sparkle:shortVersionString>
+      <sparkle:version>1.0</sparkle:version>
+      <sparkle:shortVersionString>1.0</sparkle:shortVersionString>
       <description>
         <![CDATA[
           <ul>
-            <li>Added new AI Brain mode</li>
-            <li>Fixed bugs with local LLM</li>
+            <li>Initial release of Omni</li>
           </ul>
         ]]>
       </description>
       <pubDate>Wed, 19 Nov 2025 12:00:00 +0000</pubDate>
       <enclosure 
-        url="https://github.com/bryanparreira/Omni/releases/download/v1.1/Omni.zip" 
-        sparkle:version="1.1" 
-        sparkle:shortVersionString="1.1" 
+        url="https://github.com/bryanparreira/Omni/releases/download/v1.0/Omni.zip" 
+        sparkle:version="1.0" 
+        sparkle:shortVersionString="1.0" 
         sparkle:edSignature="p0CWq5fKCR3oSIXsCLWbNwl27mqoc4FpV3E2PVPcaY/todn7I0bLPUdauIG9IuPisJ2dHhCwvYPbVLye76Z6BQ==" 
         length="3383607"
         type="application/octet-stream"/>
