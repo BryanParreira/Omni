@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Omni Changelog</title>
+        <link>http://sparkle-project.org/files/sparkletestcast.xml</link>
+        <description>Most recent changes with links to updates.</description>
+        <language>en</language>
+        <item>
+            <title>Version 1.1</title>
+            <link>https://github.com/YOUR_USERNAME/Omni/releases</link>
+            <sparkle:version>1.1</sparkle:version>
+            <description>
+                <![CDATA[
+                <ul>
+                    <li>Added new AI Brain mode</li>
+                    <li>Fixed bugs with local LLM</li>
+                </ul>
+                ]]>
+            </description>
+            <pubDate>Wed, 15 Nov 2025 12:00:00 +0000</pubDate>
+            <enclosure url="https://github.com/YOUR_USERNAME/Omni/releases/download/v1.1/Omni.zip"
+                       sparkle:version="1.1"
+                       sparkle:shortVersionString="1.1"
+                       sparkle:edSignature="PASTE_YOUR_HUGE_SIGNATURE_STRING_HERE"
+                       type="application/octet-stream" />
+        </item>
+    </channel>
+</rss>
