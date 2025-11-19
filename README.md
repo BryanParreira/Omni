@@ -101,13 +101,29 @@
 ║                    WORKFLOW & PRODUCTIVITY                          ║
 ╠═════════════════════════════════════════════════════════════════════╣
 ║                                                                     ║
-║     📅 MEETING PREP        ⚡ GLOBAL HOTKEY       📂 DRAG & DROP    ║
+║  🌐 WEB ANALYSIS                                                    ║
+║     Extract and analyze content from any webpage instantly          ║
 ║                                                                     ║
-║   Native macOS Calendar    Summon instantly      Instant file      ║
-║   integration displays     with ⌥ + Space        analysis for      ║
-║   upcoming events with     from anywhere         PDFs, code, and   ║
-║   Google, Exchange &       on your Mac           text documents    ║
-║   iCloud support                                                   ║
+║  📸 SMART OCR                                                       ║
+║     Read and index text from images with advanced recognition       ║
+║                                                                     ║
+║  📚 GLOBAL LIBRARY                                                  ║
+║     Access your key files in any conversation seamlessly            ║
+║                                                                     ║
+║  ⚡ QUICK ACCESS (⌥ + Space)                                        ║
+║     Summon Omni from anywhere on your Mac instantly                 ║
+║                                                                     ║
+║  🎯 AI QUIZ GENERATOR                                               ║
+║     Turn any document into an interactive practice test             ║
+║                                                                     ║
+║  📅 PROJECT TIMELINES                                               ║
+║     Instantly create chronological histories from your files        ║
+║                                                                     ║
+║  📂 DRAG & DROP                                                     ║
+║     Instant file analysis for PDFs, code, and text documents        ║
+║                                                                     ║
+║  📆 CALENDAR INTEGRATION                                            ║
+║     Native macOS Calendar with Google, Exchange & iCloud support    ║
 ║                                                                     ║
 ╚═════════════════════════════════════════════════════════════════════╝
 ```
