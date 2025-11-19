@@ -38,10 +38,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             launchMenuBarApp()
             NSApp.setActivationPolicy(.accessory)
         }
-        
-        // --- REMOVED ---
-        // We removed `requestAccessibilityPermissions()` from here.
-        // SetupView now handles this in a much better way.
     }
     
     /// This function shows the SetupView in its own window.
@@ -75,21 +71,56 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     /// This is your original launch logic, now in its own function.
     func launchMenuBarApp() {
         hotkeyManager = HotkeyManager(panelController: panelController)
-        setupStatusBar()
+        setupStatusBar() // This now adds the menu options
         
-        // This one line replaces the two old ones and fixes the bug
         hotkeyManager?.registerAllHotkeys()
     }
     
+    // --- UPDATED SECTION STARTS HERE ---
+    
     private func setupStatusBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        
+        // 1. Set the Icon
         if let button = statusItem?.button {
             button.image = NSImage(systemSymbolName: "brain.head.profile",
-                                     accessibilityDescription: "Omni")
-            button.action = #selector(togglePanel)
-            button.target = self
+                                   accessibilityDescription: "Omni")
+        }
+        
+        // 2. Create the Menu
+        let menu = NSMenu()
+        
+        // Option: Open Omni (In case they click the icon instead of using the hotkey)
+        menu.addItem(withTitle: "Open Omni", action: #selector(togglePanel), keyEquivalent: "o")
+        
+        menu.addItem(NSMenuItem.separator()) // Divider line
+        
+        // Option: Check for Updates
+        menu.addItem(withTitle: "Check for Updates...", action: #selector(openUpdates), keyEquivalent: "")
+        
+        menu.addItem(NSMenuItem.separator()) // Divider line
+        
+        // Option: Quit
+        menu.addItem(withTitle: "Quit Omni", action: #selector(quitApp), keyEquivalent: "q")
+        
+        // 3. Attach the menu to the status item
+        statusItem?.menu = menu
+    }
+    
+    // Action for "Check for Updates"
+    @objc func openUpdates() {
+        // REPLACE 'YOUR_USERNAME' WITH YOUR ACTUAL GITHUB USERNAME BELOW:
+        if let url = URL(string: "https://github.com/bryanparreira/omni/releases") {
+            NSWorkspace.shared.open(url)
         }
     }
+    
+    // Action for "Quit Omni"
+    @objc func quitApp() {
+        NSApplication.shared.terminate(nil)
+    }
+    
+    // --- UPDATED SECTION ENDS HERE ---
     
     @objc func togglePanel() {
         panelController?.toggle()
@@ -97,7 +128,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     /// This function is called by the 'Finish Setup' button
     func setupDidComplete() {
-        setupWindow?.close() // This already closes the window
+        setupWindow?.close()
         setupWindow = nil
         launchMenuBarApp()
         
@@ -108,21 +139,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
     
-    // --- ADD THIS FUNCTION ---
     /// Public function to allow the SetupView to close its own window.
     func closeSetupWindow() {
         setupWindow?.close()
         setupWindow = nil
     }
-    // --- END ADDITION ---
     
     // Prevents app from quitting when setup window is closed
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         let hasCompletedSetup = UserDefaults.standard.bool(forKey: "hasCompletedSetup")
         return !hasCompletedSetup
     }
-    
-    // --- REMOVED ---
-    // The `requestAccessibilityPermissions()` function was here,
-    // but it is no longer needed as SetupView handles it.
 }
