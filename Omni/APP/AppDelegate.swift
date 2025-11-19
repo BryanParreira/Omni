@@ -79,33 +79,37 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // --- UPDATED SECTION STARTS HERE ---
     
     private func setupStatusBar() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        
-        // 1. Set the Icon
-        if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "brain.head.profile",
-                                   accessibilityDescription: "Omni")
+            statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+            
+            // 1. Set the Icon
+            if let button = statusItem?.button {
+                button.image = NSImage(systemSymbolName: "brain.head.profile",
+                                       accessibilityDescription: "Omni")
+            }
+            
+            // 2. Create the Menu
+            let menu = NSMenu()
+            
+            // --- UPDATED: "Open Omni" with Option + Space ---
+            // We use a space " " as the key
+            let openItem = NSMenuItem(title: "Open Omni", action: #selector(togglePanel), keyEquivalent: " ")
+            // We set the modifier to strictly just .option (no command)
+            openItem.keyEquivalentModifierMask = [.option]
+            menu.addItem(openItem)
+            
+            menu.addItem(NSMenuItem.separator()) // Divider line
+            
+            // Option: Check for Updates
+            menu.addItem(withTitle: "Check for Updates...", action: #selector(openUpdates), keyEquivalent: "")
+            
+            menu.addItem(NSMenuItem.separator()) // Divider line
+            
+            // Option: Quit (Cmd + Q)
+            menu.addItem(withTitle: "Quit Omni", action: #selector(quitApp), keyEquivalent: "q")
+            
+            // 3. Attach the menu to the status item
+            statusItem?.menu = menu
         }
-        
-        // 2. Create the Menu
-        let menu = NSMenu()
-        
-        // Option: Open Omni (In case they click the icon instead of using the hotkey)
-        menu.addItem(withTitle: "Open Omni", action: #selector(togglePanel), keyEquivalent: "o")
-        
-        menu.addItem(NSMenuItem.separator()) // Divider line
-        
-        // Option: Check for Updates
-        menu.addItem(withTitle: "Check for Updates...", action: #selector(openUpdates), keyEquivalent: "")
-        
-        menu.addItem(NSMenuItem.separator()) // Divider line
-        
-        // Option: Quit
-        menu.addItem(withTitle: "Quit Omni", action: #selector(quitApp), keyEquivalent: "q")
-        
-        // 3. Attach the menu to the status item
-        statusItem?.menu = menu
-    }
     
     // Action for "Check for Updates"
     @objc func openUpdates() {
