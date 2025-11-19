@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>SUFeedURL</key>
+	<string>https://bryanparreira.github.io/Omni/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>9WPUTGR5giyjnFR/lv8/V0of5NqDWdUkzuf0IIHM7eE</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Omni needs permission to capture selected text via</string>
 </dict>

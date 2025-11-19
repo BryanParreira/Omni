@@ -842,7 +842,7 @@ struct AISettingsView: View {
     }
 }
 
-// --- THIS IS THE NEW, AESTHETICALLY-IMPROVED ProviderButton ---
+// --- PROVIDER BUTTON (The "Logo Generator" Button) ---
 struct ProviderButton: View {
     let title: String
     let isSelected: Bool
@@ -975,13 +975,26 @@ struct AboutView: View {
                         .font(.system(size: 13))
                         .foregroundColor(Color(hex: "AAAAAA"))
                     
-                    Text(appVersion)
+                    // --- VERSION NUMBER (Using Helper) ---
+                    Text(UpdaterService.shared.appVersion)
                         .font(.system(size: 11))
                         .foregroundColor(Color(hex: "666666"))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
                         .background(Color(hex: "252525"))
                         .cornerRadius(5)
+                    
+                    // --- NEW UPDATE BUTTON ---
+                    Button(action: {
+                        UpdaterService.shared.checkForUpdates()
+                    }) {
+                        Text("Check for Updates")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(Color(hex: "FF6B6B"))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    // -------------------------
                 }
                 
                 VStack(spacing: 10) {
@@ -1002,7 +1015,7 @@ struct AboutView: View {
             
             VStack(spacing: 10) {
                 HStack(spacing: 16) {
-                    Link(destination: URL(string: "https://github.com")!) {
+                    Link(destination: URL(string: "https://github.com/BryanParreira/Omni/tree/main/Omni")!) {
                         Label("Docs", systemImage: "book.fill")
                             .font(.system(size: 11))
                     }
@@ -1011,7 +1024,7 @@ struct AboutView: View {
                         .foregroundColor(Color(hex: "555555"))
                         .font(.system(size: 11))
                     
-                    Link(destination: URL(string: "https://github.com")!) {
+                    Link(destination: URL(string: "https://github.com/BryanParreira/Omni/issues")!) {
                         Label("Report Issue", systemImage: "exclamationmark.bubble.fill")
                             .font(.system(size: 11))
                     }
@@ -1020,7 +1033,7 @@ struct AboutView: View {
                         .foregroundColor(Color(hex: "555555"))
                         .font(.system(size: 11))
                     
-                    Link(destination: URL(string: "https://github.com")!) {
+                    Link(destination: URL(string: "https://github.com/BryanParreira/Omni")!) {
                         Label("GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
                             .font(.system(size: 11))
                     }

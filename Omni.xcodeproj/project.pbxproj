@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		302368AA2ECE213700056C63 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = 302368A92ECE213700056C63 /* Sparkle */; };
 		30672FF12EC05A570030D82B /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 30672FF02EC05A570030D82B /* SwiftSoup */; };
 /* End PBXBuildFile section */
 
@@ -824,6 +825,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				30672FF12EC05A570030D82B /* SwiftSoup in Frameworks */,
+				302368AA2ECE213700056C63 /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1668,6 +1670,7 @@
 			name = Omni;
 			packageProductDependencies = (
 				30672FF02EC05A570030D82B /* SwiftSoup */,
+				302368A92ECE213700056C63 /* Sparkle */,
 			);
 			productName = Omni;
 			productReference = 3C2F6B022EB3EA09001C2DD7 /* Omni.app */;
@@ -1747,6 +1750,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */,
+				302368A82ECE213700056C63 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 3C2F6B032EB3EA09001C2DD7 /* Products */;
@@ -1955,9 +1959,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 5PNLAR99PK;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readonly;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1981,12 +1986,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.bryanparreira.Omni;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = YES;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
-				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -2003,9 +2008,10 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = 5PNLAR99PK;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readonly;
-				ENABLE_HARDENED_RUNTIME = NO;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
 				ENABLE_PREVIEWS = YES;
@@ -2029,12 +2035,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.bryanparreira.Omni;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
-				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
+				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = YES;
 				RUNTIME_EXCEPTION_ALLOW_JIT = NO;
 				RUNTIME_EXCEPTION_ALLOW_UNSIGNED_EXECUTABLE_MEMORY = NO;
 				RUNTIME_EXCEPTION_DEBUGGING_TOOL = NO;
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
-				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
+				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 			};
@@ -2044,6 +2050,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -2062,6 +2069,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
@@ -2150,6 +2158,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		302368A82ECE213700056C63 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.1;
+			};
+		};
 		30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/scinfu/SwiftSoup.git";
@@ -2161,6 +2177,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		302368A92ECE213700056C63 /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 302368A82ECE213700056C63 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
 		30672FF02EC05A570030D82B /* SwiftSoup */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 30672FEC2EC058F50030D82B /* XCRemoteSwiftPackageReference "SwiftSoup" */;
