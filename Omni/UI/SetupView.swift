@@ -5,7 +5,8 @@ import AppKit
 
 private struct SettingsKeys {
     static let hasCompletedSetup = "hasCompletedSetup"
-    static let selectedProvider = "selected_provider"
+    static let selectedProviderType = "selected_provider" // "cloud" or "local"
+    static let activeCloudProvider = "active_cloud_provider" // "openai", "anthropic", etc.
     static let openAIKey = "openai_api_key"
     static let anthropicKey = "anthropic_api_key"
     static let geminiKey = "gemini_api_key"
@@ -257,7 +258,7 @@ private struct PermissionCard: View {
     }
 }
 
-// MARK: - Animated Mock Views (Keeping originals but with minor style updates)
+// MARK: - Animated Mock Views
 
 private struct AnimatedChatMock: View {
     @State private var showFile = false
@@ -389,19 +390,26 @@ struct SetupView: View {
     @AppStorage(SettingsKeys.openAIKey) private var openAIKey: String = ""
     @AppStorage(SettingsKeys.anthropicKey) private var anthropicKey: String = ""
     @AppStorage(SettingsKeys.geminiKey) private var geminiKey: String = ""
-    @AppStorage(SettingsKeys.selectedProvider) private var selectedProvider: String = "cloud"
+    
+    // We store "cloud" or "local" here
+    @AppStorage(SettingsKeys.selectedProviderType) private var selectedProvider: String = "cloud"
+    // We store the active cloud provider (openai, anthropic, etc) here
+    @AppStorage(SettingsKeys.activeCloudProvider) private var activeCloudProvider: String = "openai"
     @AppStorage(SettingsKeys.selectedLocalModel) private var selectedOllamaModel: String = ""
     
     @State private var currentPage = 1
     @State private var showingAccessibilityAlert = false
     @State private var showingFullDiskAlert = false
-    @State private var cloudProvider: String = "openai"
+    @State private var cloudProviderSelection: String = "openai" // Temporary state
     @State private var currentApiKey: String = ""
     @State private var hasAccessibilityPermission: Bool = false
     @State private var hasGrantedFullDiskAccess: Bool = false
     @State private var ollamaModels: [OllamaModel] = []
     @State private var ollamaFetchError: String? = nil
     @State private var isFetchingModels: Bool = false
+    
+    // Timer to check permissions
+    let timer = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
     
     var body: some View {
         ZStack {
@@ -440,6 +448,11 @@ struct SetupView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Please grant Omni 'Full Disk Access' in System Settings to enable file analysis, then click 'I've Granted Access' below.")
+        }
+        .onReceive(timer) { _ in
+            if currentPage == 4 {
+                checkAllPermissions()
+            }
         }
     }
     
@@ -591,45 +604,37 @@ struct SetupView: View {
                 }
                 .padding(.top, 20)
                 
-                // --- THIS IS THE UPDATED SECTION ---
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     FeatureShowcaseCard(
                         icon: "globe",
                         title: "Web Analysis",
                         description: "Extract and analyze content from any webpage"
                     )
-                    
                     FeatureShowcaseCard(
                         icon: "doc.text.viewfinder",
                         title: "Smart OCR",
                         description: "Read and index text from images instantly"
                     )
-                    
                     FeatureShowcaseCard(
                         icon: "folder.fill.badge.gearshape",
                         title: "Global Library",
                         description: "Access your key files in any conversation"
                     )
-                    
                     FeatureShowcaseCard(
                         icon: "command",
                         title: "Quick Access",
                         description: "⌥ + Space to summon from anywhere"
                     )
-                    
-                    // --- NEW FEATURES ADDED HERE ---
                     FeatureShowcaseCard(
                         icon: "questionmark.diamond.fill",
                         title: "AI Quiz Generator",
-                        description: "Turn any document or textbook into an interactive practice test."
+                        description: "Turn any document into an interactive practice test."
                     )
-                    
                     FeatureShowcaseCard(
                         icon: "calendar.day.timeline.leading",
                         title: "Project Timelines",
-                        description: "Instantly create a chronological history from all your project files."
+                        description: "Instantly create a chronological history from files."
                     )
-                    // --- END OF ADDITIONS ---
                 }
             }
             .padding(32)
@@ -710,13 +715,13 @@ struct SetupView: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(.white)
             
-            Picker("Provider", selection: $cloudProvider) {
+            Picker("Provider", selection: $cloudProviderSelection) {
                 Text("OpenAI").tag("openai")
                 Text("Anthropic").tag("anthropic")
                 Text("Google").tag("gemini")
             }
             .pickerStyle(.segmented)
-            .onChange(of: cloudProvider) { _, _ in currentApiKey = "" }
+            .onChange(of: cloudProviderSelection) { _, _ in currentApiKey = "" }
             
             VStack(alignment: .leading, spacing: 8) {
                 Text("API Key")
@@ -809,7 +814,7 @@ struct SetupView: View {
                         .font(.system(size: 13))
                         .foregroundColor(Color(hex: "8A8A8A"))
                     
-                    Text("ollama pull llama3.1")
+                    Text("ollama pull llama3")
                         .font(.system(size: 13, design: .monospaced))
                         .padding(10)
                         .background(Color(hex: "1F1F1F"))
@@ -962,11 +967,15 @@ struct SetupView: View {
     // MARK: - Helper Functions
     
     private func checkAllPermissions() {
-        self.hasAccessibilityPermission = PermissionsHelper.checkAccessibilityPermission()
+        // Use native macOS accessibility check
+        self.hasAccessibilityPermission = AXIsProcessTrusted()
+        
+        // We cannot check Full Disk Access programmatically without attempting file I/O.
+        // For the setup UI, if they clicked the button, we assume they did it.
+        // In production, you would try to read a file to verify.
     }
     
     private func openAccessibilitySettings() {
-        // Modern macOS URL scheme for Accessibility settings
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
             NSWorkspace.shared.open(url)
         }
@@ -985,6 +994,7 @@ struct SetupView: View {
         
         Task {
             do {
+                // Assuming LocalLLMRunner is available in your project
                 let models = try await LocalLLMRunner.shared.fetchInstalledModels()
                 
                 await MainActor.run {
@@ -1011,7 +1021,7 @@ struct SetupView: View {
     }
     
     private var apiKeyURL: URL {
-        switch cloudProvider {
+        switch cloudProviderSelection {
         case "openai":
             return URL(string: "https://platform.openai.com/keys")!
         case "anthropic":
@@ -1024,7 +1034,7 @@ struct SetupView: View {
     }
     
     private var apiKeyPlaceholder: String {
-        switch cloudProvider {
+        switch cloudProviderSelection {
         case "openai":
             return "sk-..."
         case "anthropic":
@@ -1039,7 +1049,8 @@ struct SetupView: View {
     private func handleNext() {
         if currentPage == 3 {
             if selectedProvider == "cloud" {
-                switch cloudProvider {
+                // Save specific key based on selection
+                switch cloudProviderSelection {
                 case "openai":
                     openAIKey = currentApiKey
                 case "anthropic":
@@ -1049,21 +1060,29 @@ struct SetupView: View {
                 default:
                     break
                 }
-                UserDefaults.standard.set(cloudProvider, forKey: SettingsKeys.selectedProvider)
+                
+                // IMPORTANT FIX:
+                // 1. Set the general provider type to "cloud"
+                UserDefaults.standard.set("cloud", forKey: SettingsKeys.selectedProviderType)
+                // 2. Set the SPECIFIC cloud provider (openai/anthropic/gemini)
+                UserDefaults.standard.set(cloudProviderSelection, forKey: SettingsKeys.activeCloudProvider)
+                
             } else {
-                UserDefaults.standard.set("local", forKey: SettingsKeys.selectedProvider)
+                // Local Logic
+                UserDefaults.standard.set("local", forKey: SettingsKeys.selectedProviderType)
                 UserDefaults.standard.set(selectedOllamaModel, forKey: SettingsKeys.selectedLocalModel)
             }
         }
     }
     
     private func completeSetup() {
-        hasCompletedSetup = true
+        // 1. PERMANENTLY SAVE THE FLAG
+        UserDefaults.standard.set(true, forKey: SettingsKeys.hasCompletedSetup)
         
+        // 2. Notify AppDelegate to switch modes
         if let appDelegate = NSApp.delegate as? AppDelegate {
             appDelegate.setupDidComplete()
+            appDelegate.closeSetupWindow()
         }
-        
-        (NSApp.delegate as? AppDelegate)?.closeSetupWindow()
     }
 }
